@@ -73,8 +73,7 @@ module GraphQLMetrics
         result = old_resolve_proc.call(obj, args, ctx)
 
         begin
-          next result if respond_to?(:skip_field_resolution_timing?) &&
-            skip_field_resolution_timing?(query, ctx)
+          next result if respond_to?(:skip_field_resolution_timing?) && skip_field_resolution_timing?(query)
 
           end_time = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 

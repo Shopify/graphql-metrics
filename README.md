@@ -101,15 +101,15 @@ class LoggingExtractor < GraphQLMetrics::Extractor
     })
   end
 
-  # Return something `truthy` if you want skip query extraction entirely, based on the query or
-  # for example its context.
+  # Return something `truthy` if you want skip query extraction entirely, based on the query or for example
+  # its context.
   def skip_extraction?(_query)
     false
   end
 
-  # Return something `truthy` if you want skip producing field resolution
-  # timing metrics. Applicable only if `field_extracted` is also defined.
-  def skip_field_resolution_timing?(_query, _metadata)
+  # Return something `truthy` if you want skip producing field resolution timing metrics. Applicable only if
+  # `field_extracted` is also defined.
+  def skip_field_resolution_timing?(_query)
     false
   end
 

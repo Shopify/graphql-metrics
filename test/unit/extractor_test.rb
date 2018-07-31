@@ -256,7 +256,7 @@ class ExtractorTest < ActiveSupport::TestCase
 
   test "extractor with `skip_field_resolution_timing?` callback doesn't log field resolver times" do
     class ExtractorSkipsFieldResolutionTiming < GraphQLMetrics::RedisExtractor
-      def skip_field_resolution_timing?(_query, _ctx)
+      def skip_field_resolution_timing?(_query)
         true
       end
     end
