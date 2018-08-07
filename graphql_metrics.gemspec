@@ -7,7 +7,7 @@ Gem::Specification.new do |spec|
   spec.name          = "graphql-metrics"
   spec.version       = GraphQLMetrics::VERSION
   spec.authors       = ["Christopher Butcher"]
-  spec.email         = ["christopher.butcher@shopify.com"]
+  spec.email         = ["gems@shopify.com"]
 
   spec.summary       = 'GraphQL Metrics Extractor'
   spec.description   = <<~DESCRIPTION
