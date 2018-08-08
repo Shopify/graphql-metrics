@@ -62,7 +62,7 @@ class LoggingExtractor < GraphQLMetrics::Extractor
     })
   end
 
-  # NOTE: Applicaable only if you set `use GraphQL::Batch, executor_class: GraphQLMetrics::TimedBatchExecutor`
+  # NOTE: Applicable only if you set `use GraphQL::Batch, executor_class: GraphQLMetrics::TimedBatchExecutor`
   # in your schema.
   def batch_loaded_field_extracted(metrics, _metadata)
     Rails.logger.debug({
