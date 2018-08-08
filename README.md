@@ -46,19 +46,19 @@ Here's an example of a simple extractor that logs out all GraphQL query details.
 class LoggingExtractor < GraphQLMetrics::Extractor
   def query_extracted(metrics, _metadata)
     Rails.logger.debug({
-      query_string: metrics[:query_string],
-      operation_type: metrics[:operation_type],
-      operation_name: metrics[:operation_name],
-      duration: metrics[:duration]
+      query_string: metrics[:query_string],     # "query Project { project(name: "GraphQL") { tagline } }"
+      operation_type: metrics[:operation_type], # "query"
+      operation_name: metrics[:operation_name], # "Project"
+      duration: metrics[:duration]              # 0.1
     })
   end
 
   def field_extracted(metrics, _metadata)
     Rails.logger.debug({
-      type_name: metrics[:type_name],
-      field_name: metrics[:field_name],
-      deprecated: metrics[:deprecated],
-      resolver_times: metrics[:resolver_times],
+      type_name: metrics[:type_name],           # "QueryRoot"
+      field_name: metrics[:field_name],         # "project"
+      deprecated: metrics[:deprecated],         # false
+      resolver_times: metrics[:resolver_times], # [0.1]
     })
   end
 
@@ -66,33 +66,33 @@ class LoggingExtractor < GraphQLMetrics::Extractor
   # in your schema.
   def batch_loaded_field_extracted(metrics, _metadata)
     Rails.logger.debug({
-      key: metrics[:key],
-      identifiers: metrics[:identifiers],
-      times: metrics[:times],
-      perform_queue_sizes: metrics[:perform_queue_sizes],
+      key: metrics[:key],                                 # "CommentLoader/Comment"
+      identifiers: metrics[:identifiers],                 # "Comment/_/string/_/symbol/Class/?"
+      times: metrics[:times],                             # [0.1, 0.2, 4]
+      perform_queue_sizes: metrics[:perform_queue_sizes], # [3]
     })
   end
 
   def argument_extracted(metrics, _metadata)
     Rails.logger.debug({
-      name: metrics[:name],
-      type: metrics[:type],
-      value_is_null: metrics[:value_is_null],
-      default_used: metrics[:default_used],
-      parent_input_type: metrics[:parent_input_type],
-      field_name: metrics[:field_name],
-      field_base_type: metrics[:field_base_type],
+      name: metrics[:name],                           # "post"
+      type: metrics[:type],                           # "postInput"
+      value_is_null: metrics[:value_is_null],         # false
+      default_used: metrics[:default_used],           # false
+      parent_input_type: metrics[:parent_input_type], # "PostInput"
+      field_name: metrics[:field_name],               # "postCreate"
+      field_base_type: metrics[:field_base_type],     # "MutationRoot"
     })
   end
 
   def variable_extracted(metrics, _metadata)
     Rails.logger.debug({
-      operation_name: metrics[:operation_name],
-      unwrapped_type_name: metrics[:unwrapped_type_name],
-      type: metrics[:type],
-      default_value_type: metrics[:default_value_type],
-      provided_value: metrics[:provided_value],
-      default_used: metrics[:default_used],
+      operation_name: metrics[:operation_name],           # "MyMutation"
+      unwrapped_type_name: metrics[:unwrapped_type_name], # "PostInput"
+      type: metrics[:type],                               # "PostInput!"
+      default_value_type: metrics[:default_value_type],   # "IMPLICIT_NULL"
+      provided_value: metrics[:provided_value],           # false
+      default_used: metrics[:default_used],               # false
     })
   end
 
