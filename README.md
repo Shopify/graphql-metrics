@@ -13,6 +13,16 @@ Add this line to your application's Gemfile:
 gem 'graphql-metrics'
 ```
 
+You can require it with in your code as needed with:
+```ruby
+require 'graphql_metrics'
+```
+
+Or globally in the Gemfile with:
+```ruby
+gem 'graphql-metrics', require: 'graphql_metrics'
+```
+
 And then execute:
 
     $ bundle
