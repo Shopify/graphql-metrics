@@ -11,6 +11,25 @@ class ExtractorTest < ActiveSupport::TestCase
 
     use GraphQLMetrics::RedisExtractor
     use GraphQL::Batch, executor_class: GraphQLMetrics::TimedBatchExecutor
+
+    def self.object_from_id(id, _query_ctx)
+      class_name, item_id = id.split('-')
+
+      case class_name
+      when 'Post'
+        OpenStruct.new(id: item_id, title: 'Foo', body: "Bar", comments: [])
+      when 'Comment'
+        OpenStruct.new(id: item_id, body: "Baz")
+      end
+    end
+
+    def self.resolve_type(_type, obj, _ctx)
+      if obj.respond_to?(:title)
+        Post
+      else
+        Comment
+      end
+    end
   end
 
   setup do
@@ -304,6 +323,60 @@ class ExtractorTest < ActiveSupport::TestCase
     }
 
     assert actual.values.all? { |v| v.empty? }
+  end
+
+  test 'references to QueryRoot.node#id do not emit n field usage events for all types that implement Node' do
+    query_string = <<~QUERY
+      query MyQuery {
+        node(id: "Comment-1") {
+          id
+        }
+      }
+    QUERY
+
+    result_hash = Schema.execute(query_string)
+    assert_nil result_hash['errors']
+    refute_nil result_hash['data']
+
+    actual = {
+      fields: extract_from_redis('field_extracted'),
+    }
+
+    expected = {
+      fields: [
+        { type_name: "QueryRoot", field_name: "node", deprecated: false, resolver_times: [0] },
+        { type_name: "Node", field_name: "id", deprecated: false, resolver_times: [0] },
+      ],
+    }
+
+    assert_equal expected, actual, Diffy::Diff.new(JSON.pretty_generate(expected), JSON.pretty_generate(actual))
+  end
+
+  test 'references to QueryRoot.nodes#id do not emit n field usage events for all types that implement Node' do
+    query_string = <<~QUERY
+      query MyQuery {
+        nodes(ids: ["Comment-1"]) {
+          id
+        }
+      }
+    QUERY
+
+    result_hash = Schema.execute(query_string)
+    assert_nil result_hash['errors']
+    refute_nil result_hash['data']
+
+    actual = {
+      fields: extract_from_redis('field_extracted'),
+    }
+
+    expected = {
+      fields: [
+        { type_name: "QueryRoot", field_name: "nodes", deprecated: false, resolver_times: [0] },
+        { type_name: "Node", field_name: "id", deprecated: false, resolver_times: [0] },
+      ],
+    }
+
+    assert_equal expected, actual, Diffy::Diff.new(JSON.pretty_generate(expected), JSON.pretty_generate(actual))
   end
 
   private

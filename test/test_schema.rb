@@ -13,6 +13,7 @@ class CommentLoader < GraphQL::Batch::Loader
 end
 
 class Comment < GraphQL::Schema::Object
+  implements GraphQL::Relay::Node.interface
   description "A blog comment"
 
   field :id, ID, null: false
@@ -20,6 +21,7 @@ class Comment < GraphQL::Schema::Object
 end
 
 class Post < GraphQL::Schema::Object
+  implements GraphQL::Relay::Node.interface
   description "A blog post"
 
   field :id, ID, null: false
@@ -64,6 +66,9 @@ class MutationRoot < GraphQL::Schema::Object
 end
 
 class QueryRoot < GraphQL::Schema::Object
+  field :node, field: GraphQL::Relay::Node.field
+  field :nodes, field: GraphQL::Relay::Node.plural_field
+
   field :post, Post, null: true do
     argument :id, ID, required: true
     argument :locale, String, required: false, default_value: 'en-us'
