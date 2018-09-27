@@ -250,7 +250,7 @@ module GraphQLMetrics
       extract_field(irep_node)
       extract_arguments(irep_node)
 
-      irep_node.typed_children.each_value do |children|
+      irep_node.scoped_children.each_value do |children|
         children.each_value do |child_irep_node|
           extract_node(child_irep_node)
         end
