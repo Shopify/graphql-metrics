@@ -352,6 +352,35 @@ class ExtractorTest < ActiveSupport::TestCase
     assert_equal expected, actual, Diffy::Diff.new(JSON.pretty_generate(expected), JSON.pretty_generate(actual))
   end
 
+  test 'references to QueryRoot.node#id do not emit n field usage events for all types that implement Node when pattern matching' do
+    query_string = <<~QUERY
+      query MyQuery {
+        node(id: "Comment-1") {
+          ... on Comment {
+            id
+          }
+        }
+      }
+    QUERY
+
+    result_hash = Schema.execute(query_string)
+    assert_nil result_hash['errors']
+    refute_nil result_hash['data']
+
+    actual = {
+      fields: extract_from_redis('field_extracted'),
+    }
+
+    expected = {
+      fields: [
+        { type_name: "QueryRoot", field_name: "node", deprecated: false, resolver_times: [0] },
+        { type_name: "Comment", field_name: "id", deprecated: false, resolver_times: [0] },
+      ],
+    }
+
+    assert_equal expected, actual, Diffy::Diff.new(JSON.pretty_generate(expected), JSON.pretty_generate(actual))
+  end
+
   test 'references to QueryRoot.nodes#id do not emit n field usage events for all types that implement Node' do
     query_string = <<~QUERY
       query MyQuery {
