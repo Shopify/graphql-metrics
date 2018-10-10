@@ -49,14 +49,8 @@ module GraphQLMetrics
       return unless query.irep_selection
 
       before_query_extracted(query, query.context) if respond_to?(:before_query_extracted)
-      extract_query
 
-      query.operations.each_value do |operation|
-        extract_variables(operation)
-      end
-
-      extract_node(query.irep_selection)
-      extract_batch_loaders
+      extract!(query)
 
       after_query_teardown(query) if respond_to?(:after_query_teardown)
     rescue StandardError => ex
@@ -93,6 +87,19 @@ module GraphQLMetrics
       field.redefine { resolve(new_resolve_proc) }
     end
 
+    def extract!(query)
+      @query = query
+
+      extract_query
+
+      query.operations.each_value do |operation|
+        extract_variables(operation)
+      end
+
+      extract_node(query.irep_selection)
+      extract_batch_loaders
+    end
+
     def extractor_defines_any_visitors?
       respond_to?(:query_extracted) ||
         respond_to?(:field_extracted) ||
@@ -105,6 +112,8 @@ module GraphQLMetrics
     def handle_extraction_exception(ex)
       raise ex
     end
+
+    private
 
     def extract_batch_loaders
       return unless respond_to?(:batch_loaded_field_extracted)
@@ -133,17 +142,19 @@ module GraphQLMetrics
     def extract_query
       return unless respond_to?(:query_extracted)
 
-      start_time = ctx_namespace[START_TIME_KEY]
-      return unless start_time
+      start_time = ctx_namespace[START_TIME_KEY] if ctx_namespace
+      return unless start_time || ctx_namespace.nil?
 
       end_time = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
+      duration = start_time && end_time ? end_time - start_time : nil
 
       query_extracted(
         {
           query_string: query.document.to_query_string,
           operation_type: query.selected_operation.operation_type,
           operation_name: query.selected_operation_name,
-          duration: end_time - start_time
+          duration: duration
         },
         {
           query: query,
@@ -164,7 +175,7 @@ module GraphQLMetrics
           type_name: irep_node.owner_type.name,
           field_name: irep_node.definition.name,
           deprecated: irep_node.definition.deprecation_reason.present?,
-          resolver_times: ctx_namespace.dig(TIMING_CACHE_KEY, irep_node.ast_node) || [],
+          resolver_times: ctx_namespace&.dig(TIMING_CACHE_KEY, irep_node.ast_node) || [],
         },
         {
           irep_node: irep_node,
