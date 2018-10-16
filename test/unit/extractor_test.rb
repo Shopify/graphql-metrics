@@ -60,9 +60,24 @@ class ExtractorTest < ActiveSupport::TestCase
           }
         }
       }
+
+      query OtherQuery($unusedPostId: ID!) {
+        post(id: $unusedPostId) {
+          id
+        }
+      }
     QUERY
 
-    result_hash = Schema.execute(query_string, variables: { 'postId': '1', 'titleUpcase': true })
+    result_hash = Schema.execute(
+      query_string,
+      variables: {
+        'postId': '1',
+        'titleUpcase': true,
+        'unusedPostId': '1'
+      },
+      operation_name: 'MyQuery'
+    )
+
     assert_nil result_hash['errors']
     refute_nil result_hash['data']
 
@@ -121,7 +136,8 @@ class ExtractorTest < ActiveSupport::TestCase
           type: "ID!",
           default_value_type: "IMPLICIT_NULL",
           provided_value: false,
-          default_used: false
+          default_used: false,
+          used_in_query: true
         },
         {
           operation_name: "MyQuery",
@@ -129,7 +145,8 @@ class ExtractorTest < ActiveSupport::TestCase
           type: "Boolean",
           default_value_type: "NON_NULL",
           provided_value: false,
-          default_used: true
+          default_used: true,
+          used_in_query: true
         },
         {
           operation_name: "MyQuery",
@@ -137,7 +154,17 @@ class ExtractorTest < ActiveSupport::TestCase
           type: "[String!]",
           default_value_type: "EXPLICIT_NULL",
           provided_value: false,
-          default_used: true
+          default_used: true,
+          used_in_query: true
+        },
+        {
+          operation_name: "OtherQuery",
+          unwrapped_type_name: "ID",
+          type: "ID!",
+          default_value_type: "IMPLICIT_NULL",
+          provided_value: false,
+          default_used: false,
+          used_in_query: false
         }
       ],
       batch_loaded_fields: [
@@ -241,7 +268,8 @@ class ExtractorTest < ActiveSupport::TestCase
           type: "PostInput!",
           default_value_type: "IMPLICIT_NULL",
           provided_value: false,
-          default_used: false
+          default_used: false,
+          used_in_query: true
         }
       ],
       batch_loaded_fields: []

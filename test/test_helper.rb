@@ -6,6 +6,7 @@ require 'active_support'
 require 'graphql/batch'
 
 require "minitest/autorun"
+require "minitest/focus"
 require 'mocha/minitest'
 
 require 'pry'

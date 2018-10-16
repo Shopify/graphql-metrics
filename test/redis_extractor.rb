@@ -67,6 +67,7 @@ module GraphQLMetrics
           default_value_type: metrics[:default_value_type],
           provided_value: metrics[:provided_value],
           default_used: metrics[:default_used],
+          used_in_query: metrics[:used_in_query],
         }
       )
     end

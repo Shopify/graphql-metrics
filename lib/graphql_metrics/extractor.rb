@@ -10,7 +10,7 @@ module GraphQLMetrics
     IMPLICIT_NULL = 'IMPLICIT_NULL'
     NON_NULL = 'NON_NULL'
 
-    attr_reader :query, :ctx_namespace
+    attr_reader :query, :ctx_namespace, :running_as_instrumentation
 
     def self.use(schema_definition)
       extractor = self.new
@@ -31,6 +31,7 @@ module GraphQLMetrics
 
     def before_query(query)
       return unless extractor_defines_any_visitors?
+      @running_as_instrumentation = true
 
       ns = query.context.namespace(CONTEXT_NAMESPACE)
       ns[TIMING_CACHE_KEY] = {}
@@ -92,8 +93,10 @@ module GraphQLMetrics
 
       extract_query
 
+      used_variables = extract_used_variables
+
       query.operations.each_value do |operation|
-        extract_variables(operation)
+        extract_variables(operation, used_variables)
       end
 
       extract_node(query.irep_selection)
@@ -142,8 +145,8 @@ module GraphQLMetrics
     def extract_query
       return unless respond_to?(:query_extracted)
 
-      start_time = ctx_namespace[START_TIME_KEY] if ctx_namespace
-      return unless start_time || ctx_namespace.nil?
+      start_time = ctx_namespace[START_TIME_KEY] if running_as_instrumentation
+      return if running_as_instrumentation && !start_time.present?
 
       end_time = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 
@@ -170,12 +173,16 @@ module GraphQLMetrics
       return unless respond_to?(:field_extracted)
       return unless irep_node.definition
 
+      resolver_times = if running_as_instrumentation
+        ctx_namespace.dig(TIMING_CACHE_KEY, irep_node.ast_node)
+      end
+
       field_extracted(
         {
           type_name: irep_node.owner_type.name,
           field_name: irep_node.definition.name,
           deprecated: irep_node.definition.deprecation_reason.present?,
-          resolver_times: ctx_namespace&.dig(TIMING_CACHE_KEY, irep_node.ast_node) || [],
+          resolver_times: resolver_times || [],
         },
         {
           irep_node: irep_node,
@@ -211,7 +218,7 @@ module GraphQLMetrics
       handle_extraction_exception(ex)
     end
 
-    def extract_variables(operation)
+    def extract_variables(operation, used_variables)
       return unless respond_to?(:variable_extracted)
 
       operation.variables.each do |variable|
@@ -235,7 +242,8 @@ module GraphQLMetrics
             type: variable.type.to_query_string,
             default_value_type: default_value_type,
             provided_value: value_provided,
-            default_used: default_used
+            default_used: default_used,
+            used_in_query: used_variables.include?(variable.name)
           },
           {
             query: query
@@ -244,6 +252,10 @@ module GraphQLMetrics
       end
     rescue StandardError => ex
       handle_extraction_exception(ex)
+    end
+
+    def extract_used_variables
+      query.irep_selection.ast_node.variables.each_with_object(Set.new) { |v, set| set << v.name }
     end
 
     def extract_arguments(irep_node)

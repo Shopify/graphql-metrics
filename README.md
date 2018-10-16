@@ -103,6 +103,7 @@ class LoggingExtractor < GraphQLMetrics::Extractor
       default_value_type: metrics[:default_value_type],   # "IMPLICIT_NULL"
       provided_value: metrics[:provided_value],           # false
       default_used: metrics[:default_used],               # false
+      used_in_query: metrics[:used_in_query],             # true
     })
   end
 
