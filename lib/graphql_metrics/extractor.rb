@@ -2,14 +2,32 @@
 
 module GraphQLMetrics
   class Extractor
+    class DummyInstrumentor
+      def after_query_start_and_end_time
+        [nil, nil]
+      end
+
+      def after_query_resolver_times(_ast_node)
+        []
+      end
+
+      def ctx_namespace
+        {}
+      end
+    end
+
     EXPLICIT_NULL = 'EXPLICIT_NULL'
     IMPLICIT_NULL = 'IMPLICIT_NULL'
     NON_NULL = 'NON_NULL'
 
-    attr_reader :query, :instrumentor
+    attr_reader :query
 
-    def initialize(instrumentor = nil)
+    def initialize(instrumentor = DummyInstrumentor.new)
       @instrumentor = instrumentor
+    end
+
+    def instrumentor
+      @instrumentor ||= DummyInstrumentor.new
     end
 
     def extract!(query)
@@ -74,13 +92,7 @@ module GraphQLMetrics
     def extract_query
       return unless query_extracted_method = extraction_method(:query_extracted)
 
-      start_time, end_time = if instrumentor
-        start_time = instrumentor.ctx_namespace[Instrumentation::START_TIME_KEY]
-        return unless start_time
-
-        [start_time, Instrumentation.current_time]
-      end
-
+      start_time, end_time = instrumentor.after_query_start_and_end_time
       duration = start_time && end_time ? end_time - start_time : nil
 
       query_extracted_method.call(
@@ -104,9 +116,7 @@ module GraphQLMetrics
       return unless field_extracted_method = extraction_method(:field_extracted)
       return unless irep_node.definition
 
-      resolver_times = if instrumentor
-        instrumentor.ctx_namespace.dig(Instrumentation::TIMING_CACHE_KEY, irep_node.ast_node)
-      end
+      resolver_times = instrumentor.after_query_resolver_times(irep_node.ast_node)
 
       field_extracted_method.call(
         {
@@ -118,7 +128,7 @@ module GraphQLMetrics
         {
           irep_node: irep_node,
           query: query,
-          ctx_namespace: instrumentor&.ctx_namespace
+          ctx_namespace: instrumentor.ctx_namespace
         }
       )
 

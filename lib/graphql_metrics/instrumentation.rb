@@ -91,5 +91,16 @@ module GraphQLMetrics
 
       field.redefine { resolve(new_resolve_proc) }
     end
+
+    def after_query_resolver_times(ast_node)
+      ctx_namespace.dig(Instrumentation::TIMING_CACHE_KEY).fetch(ast_node, [])
+    end
+
+    def after_query_start_and_end_time
+      start_time = ctx_namespace[Instrumentation::START_TIME_KEY]
+      return unless start_time
+
+      [start_time, self.class.current_time]
+    end
   end
 end
