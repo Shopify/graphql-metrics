@@ -137,7 +137,7 @@ class ExtractorTest < ActiveSupport::TestCase
           default_value_type: "IMPLICIT_NULL",
           provided_value: false,
           default_used: false,
-          used_in_query: true
+          used_in_operation: true
         },
         {
           operation_name: "MyQuery",
@@ -146,7 +146,7 @@ class ExtractorTest < ActiveSupport::TestCase
           default_value_type: "NON_NULL",
           provided_value: false,
           default_used: true,
-          used_in_query: true
+          used_in_operation: true
         },
         {
           operation_name: "MyQuery",
@@ -155,7 +155,7 @@ class ExtractorTest < ActiveSupport::TestCase
           default_value_type: "EXPLICIT_NULL",
           provided_value: false,
           default_used: true,
-          used_in_query: true
+          used_in_operation: true
         },
         {
           operation_name: "OtherQuery",
@@ -164,7 +164,7 @@ class ExtractorTest < ActiveSupport::TestCase
           default_value_type: "IMPLICIT_NULL",
           provided_value: false,
           default_used: false,
-          used_in_query: false
+          used_in_operation: false
         }
       ],
       batch_loaded_fields: [
@@ -269,7 +269,7 @@ class ExtractorTest < ActiveSupport::TestCase
           default_value_type: "IMPLICIT_NULL",
           provided_value: false,
           default_used: false,
-          used_in_query: true
+          used_in_operation: true
         }
       ],
       batch_loaded_fields: []
@@ -279,7 +279,7 @@ class ExtractorTest < ActiveSupport::TestCase
   end
 
   test 'extractor with `before_query_extracted` callback' do
-    class ExtractorWithCallbacks < GraphQLMetrics::Extractor
+    class ExtractorWithCallbacks < GraphQLMetrics::Instrumentation
       attr_reader :from_context
 
       def before_query_extracted(_query, query_context)

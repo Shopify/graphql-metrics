@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module GraphQLMetrics
-  class RedisExtractor < GraphQLMetrics::Extractor
+  class RedisExtractor < GraphQLMetrics::Instrumentation
     def initialize
       @redis = Redis.new
     end
@@ -67,7 +67,7 @@ module GraphQLMetrics
           default_value_type: metrics[:default_value_type],
           provided_value: metrics[:provided_value],
           default_used: metrics[:default_used],
-          used_in_query: metrics[:used_in_query],
+          used_in_operation: metrics[:used_in_operation],
         }
       )
     end
