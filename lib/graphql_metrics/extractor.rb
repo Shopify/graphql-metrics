@@ -2,117 +2,76 @@
 
 module GraphQLMetrics
   class Extractor
-    CONTEXT_NAMESPACE = :extracted_metrics
-    TIMING_CACHE_KEY = :timing_cache
-    START_TIME_KEY = :query_start_time
+    class DummyInstrumentor
+      def after_query_start_and_end_time
+        [nil, nil]
+      end
+
+      def after_query_resolver_times(_ast_node)
+        []
+      end
+
+      def ctx_namespace
+        {}
+      end
+    end
 
     EXPLICIT_NULL = 'EXPLICIT_NULL'
     IMPLICIT_NULL = 'IMPLICIT_NULL'
     NON_NULL = 'NON_NULL'
 
-    attr_reader :query, :ctx_namespace
+    attr_reader :query
 
-    def self.use(schema_definition)
-      extractor = self.new
-      return unless extractor.extractor_defines_any_visitors?
-
-      extractor.setup_instrumentation(schema_definition)
+    def initialize(instrumentor = DummyInstrumentor.new)
+      @instrumentor = instrumentor
     end
 
-    def use(schema_definition)
-      return unless extractor_defines_any_visitors?
-      setup_instrumentation(schema_definition)
+    def instrumentor
+      @instrumentor ||= DummyInstrumentor.new
     end
 
-    def setup_instrumentation(schema_definition)
-      schema_definition.instrument(:query, self)
-      schema_definition.instrument(:field, self)
-    end
-
-    def before_query(query)
-      return unless extractor_defines_any_visitors?
-
-      ns = query.context.namespace(CONTEXT_NAMESPACE)
-      ns[TIMING_CACHE_KEY] = {}
-      ns[START_TIME_KEY] = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    rescue StandardError => ex
-      handle_extraction_exception(ex)
-    end
-
-    def after_query(query)
-      return unless extractor_defines_any_visitors?
-
+    def extract!(query)
       @query = query
+
       return unless query.valid?
-      return if respond_to?(:skip_extraction?) && skip_extraction?(query)
-      return unless @ctx_namespace = query.context.namespace(CONTEXT_NAMESPACE)
       return unless query.irep_selection
 
-      before_query_extracted(query, query.context) if respond_to?(:before_query_extracted)
       extract_query
 
+      used_variables = extract_used_variables
+
       query.operations.each_value do |operation|
-        extract_variables(operation)
+        extract_variables(operation, used_variables)
       end
 
       extract_node(query.irep_selection)
       extract_batch_loaders
-
-      after_query_teardown(query) if respond_to?(:after_query_teardown)
-    rescue StandardError => ex
-      handle_extraction_exception(ex)
-    end
-
-    def instrument(type, field)
-      return field unless respond_to?(:field_extracted)
-      return field if type.introspection?
-
-      old_resolve_proc = field.resolve_proc
-      new_resolve_proc = ->(obj, args, ctx) do
-        start_time = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        result = old_resolve_proc.call(obj, args, ctx)
-
-        begin
-          next result if respond_to?(:skip_field_resolution_timing?) &&
-            skip_field_resolution_timing?(query, ctx)
-
-          end_time = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-
-          ns = ctx.namespace(CONTEXT_NAMESPACE)
-
-          ns[TIMING_CACHE_KEY][ctx.ast_node] ||= []
-          ns[TIMING_CACHE_KEY][ctx.ast_node] << end_time - start_time
-
-          result
-        rescue StandardError => ex
-          handle_extraction_exception(ex)
-          result
-        end
-      end
-
-      field.redefine { resolve(new_resolve_proc) }
     end
 
     def extractor_defines_any_visitors?
-      respond_to?(:query_extracted) ||
-        respond_to?(:field_extracted) ||
-        respond_to?(:argument_extracted) ||
-        respond_to?(:variable_extracted) ||
-        respond_to?(:batch_loaded_field_extracted) ||
-        respond_to?(:before_query_extracted)
+      [self, instrumentor].any? do |extractor_definer|
+        extractor_definer.respond_to?(:query_extracted) ||
+        extractor_definer.respond_to?(:field_extracted) ||
+        extractor_definer.respond_to?(:argument_extracted) ||
+        extractor_definer.respond_to?(:variable_extracted) ||
+        extractor_definer.respond_to?(:batch_loaded_field_extracted) ||
+        extractor_definer.respond_to?(:before_query_extracted)
+      end
     end
 
     def handle_extraction_exception(ex)
       raise ex
     end
 
+    private
+
     def extract_batch_loaders
-      return unless respond_to?(:batch_loaded_field_extracted)
+      return unless batch_loaded_field_extracted_method = extraction_method(:batch_loaded_field_extracted)
 
       TimedBatchExecutor.timings.each do |key, resolve_meta|
         key, identifiers = TimedBatchExecutor.serialize_loader_key(key)
 
-        batch_loaded_field_extracted(
+        batch_loaded_field_extracted_method.call(
           {
             key: key,
             identifiers: identifiers,
@@ -131,19 +90,17 @@ module GraphQLMetrics
     end
 
     def extract_query
-      return unless respond_to?(:query_extracted)
+      return unless query_extracted_method = extraction_method(:query_extracted)
 
-      start_time = ctx_namespace[START_TIME_KEY]
-      return unless start_time
+      start_time, end_time = instrumentor.after_query_start_and_end_time
+      duration = start_time && end_time ? end_time - start_time : nil
 
-      end_time = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-
-      query_extracted(
+      query_extracted_method.call(
         {
           query_string: query.document.to_query_string,
           operation_type: query.selected_operation.operation_type,
           operation_name: query.selected_operation_name,
-          duration: end_time - start_time
+          duration: duration
         },
         {
           query: query,
@@ -156,20 +113,22 @@ module GraphQLMetrics
     end
 
     def extract_field(irep_node)
-      return unless respond_to?(:field_extracted)
+      return unless field_extracted_method = extraction_method(:field_extracted)
       return unless irep_node.definition
 
-      field_extracted(
+      resolver_times = instrumentor.after_query_resolver_times(irep_node.ast_node)
+
+      field_extracted_method.call(
         {
           type_name: irep_node.owner_type.name,
           field_name: irep_node.definition.name,
           deprecated: irep_node.definition.deprecation_reason.present?,
-          resolver_times: ctx_namespace.dig(TIMING_CACHE_KEY, irep_node.ast_node) || [],
+          resolver_times: resolver_times || [],
         },
         {
           irep_node: irep_node,
           query: query,
-          ctx_namespace: ctx_namespace
+          ctx_namespace: instrumentor.ctx_namespace
         }
       )
 
@@ -178,9 +137,9 @@ module GraphQLMetrics
     end
 
     def extract_argument(value, irep_node, types)
-      return unless respond_to?(:argument_extracted)
+      return unless argument_extracted_method = extraction_method(:argument_extracted)
 
-      argument_extracted(
+      argument_extracted_method.call(
         {
           name: value.definition.expose_as,
           type: value.definition.type.unwrap.to_s,
@@ -200,8 +159,8 @@ module GraphQLMetrics
       handle_extraction_exception(ex)
     end
 
-    def extract_variables(operation)
-      return unless respond_to?(:variable_extracted)
+    def extract_variables(operation, used_variables)
+      return unless variable_extracted_method = extraction_method(:variable_extracted)
 
       operation.variables.each do |variable|
         value_provided = query.provided_variables.key?(variable.name)
@@ -217,14 +176,15 @@ module GraphQLMetrics
 
         default_used = !value_provided && default_value_type != IMPLICIT_NULL
 
-        variable_extracted(
+        variable_extracted_method.call(
           {
             operation_name: operation.name,
             unwrapped_type_name: unwrapped_type(variable.type),
             type: variable.type.to_query_string,
             default_value_type: default_value_type,
             provided_value: value_provided,
-            default_used: default_used
+            default_used: default_used,
+            used_in_operation: used_variables.include?(variable.name)
           },
           {
             query: query
@@ -233,6 +193,10 @@ module GraphQLMetrics
       end
     rescue StandardError => ex
       handle_extraction_exception(ex)
+    end
+
+    def extract_used_variables
+      query.irep_selection.ast_node.variables.each_with_object(Set.new) { |v, set| set << v.name }
     end
 
     def extract_arguments(irep_node)
@@ -291,6 +255,23 @@ module GraphQLMetrics
       end
     rescue StandardError => ex
       handle_extraction_exception(ex)
+    end
+
+    def extraction_method(method_name)
+      @extraction_method_cache ||= {}
+      return @extraction_method_cache[method_name] if @extraction_method_cache.has_key?(method_name)
+
+      method = if respond_to?(method_name)
+        method(method_name)
+      elsif instrumentor && instrumentor.respond_to?(method_name)
+        instrumentor.method(method_name)
+      else
+        nil
+      end
+
+      method.tap do |method|
+        @extraction_method_cache[method_name] = method
+      end
     end
   end
 end

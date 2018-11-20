@@ -55,7 +55,7 @@ module GraphQLMetrics
 
     def resolve(loader)
       @resolve_meta = {
-        start_time: Process.clock_gettime(Process::CLOCK_MONOTONIC),
+        start_time: Instrumentation.current_time,
         current_loader: loader,
         perform_queue_sizes: loader.send(:queue).size
       }
@@ -66,7 +66,7 @@ module GraphQLMetrics
     def around_promise_callbacks
       return super unless @resolve_meta
 
-      end_time = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      end_time = Instrumentation.current_time
 
       TIMINGS[@resolve_meta[:current_loader].loader_key] ||= { times: [], perform_queue_sizes: [] }
       TIMINGS[@resolve_meta[:current_loader].loader_key][:times] << end_time - @resolve_meta[:start_time]

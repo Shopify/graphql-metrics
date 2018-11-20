@@ -26,6 +26,8 @@ GEM
     metaclass (0.0.4)
     method_source (0.9.0)
     minitest (5.11.3)
+    minitest-focus (1.1.2)
+      minitest (>= 4, < 6)
     mocha (1.5.0)
       metaclass (~> 0.0.1)
     promise.rb (0.7.4)
@@ -53,6 +55,7 @@ DEPENDENCIES
   graphql-batch
   graphql-metrics!
   minitest (~> 5.0)
+  minitest-focus
   mocha
   pry
   pry-byebug

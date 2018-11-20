@@ -53,7 +53,7 @@ implementing the methods below, as needed.
 Here's an example of a simple extractor that logs out all GraphQL query details.
 
 ```ruby
-class LoggingExtractor < GraphQLMetrics::Extractor
+class LoggingExtractor < GraphQLMetrics::Instrumentation
   def query_extracted(metrics, _metadata)
     Rails.logger.debug({
       query_string: metrics[:query_string],     # "query Project { project(name: "GraphQL") { tagline } }"
@@ -103,6 +103,7 @@ class LoggingExtractor < GraphQLMetrics::Extractor
       default_value_type: metrics[:default_value_type],   # "IMPLICIT_NULL"
       provided_value: metrics[:provided_value],           # false
       default_used: metrics[:default_used],               # false
+      used_in_operation: metrics[:used_in_operation],     # true
     })
   end
 
@@ -132,6 +133,32 @@ class LoggingExtractor < GraphQLMetrics::Extractor
   end
 end
 ```
+
+You can also define ad hoc query Extractors that can work with instances of GraphQL::Query, for example:
+
+```ruby
+class TypeUsageExtractor < GraphQLMetrics::Extractor
+  attr_reader :types_used
+
+  def initialize
+    @types_used = Set.new
+  end
+
+  def field_extracted(metrics, _metadata)
+    @types_used << metrics[:type_name]
+  end
+end
+
+# ...
+
+extractor = TypeUsageExtractor.new
+extractor.extract!(query)
+puts extractor.types_used
+# => ["Comment", "Post", "QueryRoot"]
+```
+
+Note that resolver-timing related data like `duration` in `query_extracted` and `resolver_times` in `field_extracted`
+won't be available when using an ad hoc Extractor, since the query isn't actually being run; it's only analyzed.
 
 ## Development
 
