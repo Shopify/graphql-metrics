@@ -24,7 +24,8 @@ module GraphQLMetrics
 
     def use(schema_definition)
       return unless extractor_defines_any_visitors?
-      extractor.setup_instrumentation(schema_definition)
+
+      setup_instrumentation(schema_definition)
     end
 
     def setup_instrumentation(schema_definition)

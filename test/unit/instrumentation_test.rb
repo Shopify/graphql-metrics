@@ -2,14 +2,14 @@
 
 require "test_helper"
 require "test_schema"
-require "redis_extractor"
+require "redis_instrumentation"
 
-class ExtractorTest < ActiveSupport::TestCase
+class InstrumentationTest < ActiveSupport::TestCase
   class Schema < GraphQL::Schema
     query QueryRoot
     mutation MutationRoot
 
-    use GraphQLMetrics::RedisExtractor
+    use GraphQLMetrics::RedisInstrumentation
     use GraphQL::Batch, executor_class: GraphQLMetrics::TimedBatchExecutor
 
     def self.object_from_id(id, _query_ctx)
@@ -302,7 +302,7 @@ class ExtractorTest < ActiveSupport::TestCase
   end
 
   test "extractor with `skip_field_resolution_timing?` callback doesn't log field resolver times" do
-    class ExtractorSkipsFieldResolutionTiming < GraphQLMetrics::RedisExtractor
+    class ExtractorSkipsFieldResolutionTiming < GraphQLMetrics::RedisInstrumentation
       def skip_field_resolution_timing?(_query, _ctx)
         true
       end
@@ -325,7 +325,7 @@ class ExtractorTest < ActiveSupport::TestCase
   end
 
   test "extractor with `skip_extraction?` callback doesn't log anything" do
-    class ExtractorSkipsAllLogging < GraphQLMetrics::RedisExtractor
+    class ExtractorSkipsAllLogging < GraphQLMetrics::RedisInstrumentation
       def skip_extraction?(_query)
         true
       end
@@ -434,6 +434,17 @@ class ExtractorTest < ActiveSupport::TestCase
     }
 
     assert_equal expected, actual, Diffy::Diff.new(JSON.pretty_generate(expected), JSON.pretty_generate(actual))
+  end
+
+  test 'can be passed as an instance, to an instance of a schema, with Schema#use' do
+    instumentation_instance = GraphQLMetrics::RedisInstrumentation.new
+    schema_instance = Schema.new
+
+    assert_nothing_raised do
+      schema_instance.redefine do |schema|
+        use(instumentation_instance)
+      end
+    end
   end
 
   private

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module GraphQLMetrics
-  class RedisExtractor < GraphQLMetrics::Instrumentation
+  class RedisInstrumentation < GraphQLMetrics::Instrumentation
     def initialize
       @redis = Redis.new
     end

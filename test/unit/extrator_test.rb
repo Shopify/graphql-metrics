@@ -3,7 +3,7 @@
 require "test_helper"
 require "test_schema"
 
-class NonInstrumentationExtractorTest < ActiveSupport::TestCase
+class ExtractorTest < ActiveSupport::TestCase
   class TypeUsageExtractor < GraphQLMetrics::Extractor
     attr_reader :types_used
 
