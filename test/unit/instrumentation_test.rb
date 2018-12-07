@@ -89,12 +89,9 @@ class InstrumentationTest < ActiveSupport::TestCase
       batch_loaded_fields: extract_from_redis('batch_loaded_field_extracted'),
     }
 
-    normalize_query_string_in_actual(actual)
-
     expected = {
       queries: [
         {
-          query_string: normalize_query_string(query_string),
           operation_type: "query",
           operation_name: "MyQuery",
           duration: 0
@@ -205,12 +202,9 @@ class InstrumentationTest < ActiveSupport::TestCase
       batch_loaded_fields: extract_from_redis('batch_loaded_field_extracted'),
     }
 
-    normalize_query_string_in_actual(actual)
-
     expected = {
       queries: [
         {
-          query_string: normalize_query_string(query_string),
           operation_type: "mutation",
           operation_name: "MyMutation",
           duration: 0
@@ -461,13 +455,5 @@ class InstrumentationTest < ActiveSupport::TestCase
 
   def extract_from_redis(key)
     @redis.lrange(key, 0, -1).map { |v| eval v }.reverse
-  end
-
-  def normalize_query_string_in_actual(actual)
-    actual[:queries].first[:query_string] = normalize_query_string(actual[:queries].first[:query_string])
-  end
-
-  def normalize_query_string(query_string)
-    query_string.gsub(/\n/, ' ').squish
   end
 end

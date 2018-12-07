@@ -97,7 +97,6 @@ module GraphQLMetrics
 
       query_extracted_method.call(
         {
-          query_string: query.document.to_query_string,
           operation_type: query.selected_operation.operation_type,
           operation_name: query.selected_operation_name,
           duration: duration
