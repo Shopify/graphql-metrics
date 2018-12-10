@@ -10,7 +10,6 @@ module GraphQLMetrics
       @redis.lpush(
         'query_extracted',
         {
-          query_string: metrics[:query_string],
           operation_type: metrics[:operation_type],
           operation_name: metrics[:operation_name],
           duration: metrics[:duration],
