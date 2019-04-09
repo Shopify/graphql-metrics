@@ -61,6 +61,8 @@ module GraphQLMetrics
       after_query_teardown(query) if respond_to?(:after_query_teardown)
     rescue StandardError => ex
       extractor.handle_extraction_exception(ex)
+    ensure
+      @query = nil
     end
 
     def instrument(type, field)
