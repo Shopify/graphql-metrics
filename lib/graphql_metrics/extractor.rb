@@ -3,7 +3,7 @@
 module GraphQLMetrics
   class Extractor
     class DummyInstrumentor
-      def after_query_start_and_end_time
+      def after_query_start_and_after_query_start_and_duration
         [nil, nil]
       end
 
@@ -92,8 +92,7 @@ module GraphQLMetrics
     def extract_query
       return unless query_extracted_method = extraction_method(:query_extracted)
 
-      start_time, end_time = instrumentor.after_query_start_and_end_time
-      duration = start_time && end_time ? end_time - start_time : nil
+      start_time, duration = instrumentor.after_query_start_and_after_query_start_and_duration
 
       query_extracted_method.call(
         {
@@ -104,7 +103,7 @@ module GraphQLMetrics
         {
           query: query,
           start_time: start_time,
-          end_time: end_time
+          duration: duration,
         }
       )
     rescue StandardError => ex

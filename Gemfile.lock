@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    graphql-metrics (2.0.1)
+    graphql-metrics (2.0.2)
 
 GEM
   remote: https://rubygems.org/
@@ -62,4 +62,4 @@ DEPENDENCIES
   rake
 
 BUNDLED WITH
-   1.16.3
+   1.17.3

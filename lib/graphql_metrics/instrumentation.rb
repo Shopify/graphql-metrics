@@ -7,6 +7,7 @@ module GraphQLMetrics
     CONTEXT_NAMESPACE = :extracted_metrics
     TIMING_CACHE_KEY = :timing_cache
     START_TIME_KEY = :query_start_time
+    START_TIME_MONOTONIC_KEY = :query_start_time_monotonic
 
     attr_reader :ctx_namespace, :query
     def_delegators :extractor, :extractor_defines_any_visitors?
@@ -19,6 +20,10 @@ module GraphQLMetrics
     end
 
     def self.current_time
+      Process.clock_gettime(Process::CLOCK_REALTIME)
+    end
+
+    def self.current_time_monotonic
       Process.clock_gettime(Process::CLOCK_MONOTONIC)
     end
 
@@ -43,6 +48,7 @@ module GraphQLMetrics
       ns = query.context.namespace(CONTEXT_NAMESPACE)
       ns[TIMING_CACHE_KEY] = {}
       ns[START_TIME_KEY] = self.class.current_time
+      ns[START_TIME_MONOTONIC_KEY] = self.class.current_time_monotonic
     rescue StandardError => ex
       extractor.handle_extraction_exception(ex)
     end
@@ -72,18 +78,23 @@ module GraphQLMetrics
       old_resolve_proc = field.resolve_proc
       new_resolve_proc = ->(obj, args, ctx) do
         start_time = self.class.current_time
+        start_time_monotonic = self.class.current_time_monotonic
+
         result = old_resolve_proc.call(obj, args, ctx)
 
         begin
           next result if respond_to?(:skip_field_resolution_timing?) &&
             skip_field_resolution_timing?(query, ctx)
 
-          end_time = self.class.current_time
+          duration = self.class.current_time_monotonic - start_time_monotonic
 
           ns = ctx.namespace(CONTEXT_NAMESPACE)
 
           ns[TIMING_CACHE_KEY][ctx.ast_node] ||= []
-          ns[TIMING_CACHE_KEY][ctx.ast_node] << end_time - start_time
+          ns[TIMING_CACHE_KEY][ctx.ast_node] << {
+            start_time: start_time,
+            duration: duration,
+          }
 
           result
         rescue StandardError => ex
@@ -99,11 +110,13 @@ module GraphQLMetrics
       ctx_namespace.dig(Instrumentation::TIMING_CACHE_KEY).fetch(ast_node, [])
     end
 
-    def after_query_start_and_end_time
+    def after_query_start_and_after_query_start_and_duration
       start_time = ctx_namespace[Instrumentation::START_TIME_KEY]
+      start_time_monotonic = ctx_namespace[Instrumentation::START_TIME_MONOTONIC_KEY]
       return unless start_time
 
-      [start_time, self.class.current_time]
+      duration = self.class.current_time_monotonic - start_time_monotonic
+      [start_time, duration]
     end
   end
 end

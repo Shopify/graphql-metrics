@@ -98,17 +98,72 @@ class InstrumentationTest < ActiveSupport::TestCase
         }
       ],
       fields: [
-        { type_name: "QueryRoot", field_name: "post", deprecated: false, resolver_times: [0] },
-        { type_name: "Post", field_name: "id", deprecated: false, resolver_times: [0] },
-        { type_name: "Post", field_name: "title", deprecated: false, resolver_times: [0] },
-        { type_name: "Post", field_name: "body", deprecated: false, resolver_times: [0] },
-        { type_name: "Post", field_name: "deprecatedBody", deprecated: true, resolver_times: [0] },
-        { type_name: "Post", field_name: "comments", deprecated: false, resolver_times: [0] },
-        { type_name: "Comment", field_name: "id", deprecated: false, resolver_times: [0, 0] },
-        { type_name: "Comment", field_name: "body", deprecated: false, resolver_times: [0, 0] },
-        { type_name: "Post", field_name: "comments", deprecated: false, resolver_times: [0] },
-        { type_name: "Comment", field_name: "id", deprecated: false, resolver_times: [0, 0] },
-        { type_name: "Comment", field_name: "body", deprecated: false, resolver_times: [0, 0] }
+        {
+          type_name: "QueryRoot",
+          field_name: "post",
+          deprecated: false,
+          resolver_times: [ { start_time: 0, duration: 0, } ],
+        },
+        {
+          type_name: "Post",
+          field_name: "id",
+          deprecated: false,
+          resolver_times: [ { start_time: 0, duration: 0, } ],
+        },
+        {
+          type_name: "Post",
+          field_name: "title",
+          deprecated: false,
+          resolver_times: [ { start_time: 0, duration: 0, } ],
+        },
+        {
+          type_name: "Post",
+          field_name: "body",
+          deprecated: false,
+          resolver_times: [ { start_time: 0, duration: 0, } ],
+        },
+        {
+          type_name: "Post",
+          field_name: "deprecatedBody",
+          deprecated: true,
+          resolver_times: [ { start_time: 0, duration: 0, } ],
+        },
+        {
+          type_name: "Post",
+          field_name: "comments",
+          deprecated: false,
+          resolver_times: [ { start_time: 0, duration: 0, } ],
+        },
+        {
+          type_name: "Comment",
+          field_name: "id",
+          deprecated: false,
+          resolver_times: [ { start_time: 0, duration: 0, }, { start_time: 0, duration: 0, } ]
+        },
+        {
+          type_name: "Comment",
+          field_name: "body",
+          deprecated: false,
+          resolver_times: [ { start_time: 0, duration: 0, }, { start_time: 0, duration: 0, } ]
+        },
+        {
+          type_name: "Post",
+          field_name: "comments",
+          deprecated: false,
+          resolver_times: [ { start_time: 0, duration: 0, } ],
+        },
+        {
+          type_name: "Comment",
+          field_name: "id",
+          deprecated: false,
+          resolver_times: [ { start_time: 0, duration: 0, }, { start_time: 0, duration: 0, } ]
+        },
+        {
+          type_name: "Comment",
+          field_name: "body",
+          deprecated: false,
+          resolver_times: [{ start_time: 0, duration: 0, }, { start_time: 0, duration: 0, } ],
+         }
       ],
       arguments: [
         { name: "id", type: "ID", value_is_null: false, default_used: false, parent_input_type: nil,
@@ -168,7 +223,7 @@ class InstrumentationTest < ActiveSupport::TestCase
         {
           key: "CommentLoader/Comment",
           identifiers: [],
-          times: [0],
+          times: [{ start_time: 0, duration: 0, }],
           perform_queue_sizes: [4]
         }
       ]
@@ -211,11 +266,36 @@ class InstrumentationTest < ActiveSupport::TestCase
         }
       ],
       fields: [
-        { type_name: "MutationRoot", field_name: "postCreate", deprecated: false, resolver_times: [0] },
-        { type_name: "PostCreatePayload", field_name: "post", deprecated: false, resolver_times: [0] },
-        { type_name: "Post", field_name: "id", deprecated: false, resolver_times: [0] },
-        { type_name: "Post", field_name: "title", deprecated: false, resolver_times: [0] },
-        { type_name: "Post", field_name: "body", deprecated: false, resolver_times: [0] }
+        {
+          type_name: "MutationRoot",
+          field_name: "postCreate",
+          deprecated: false,
+          resolver_times: [ { start_time: 0, duration: 0, } ],
+        },
+        {
+          type_name: "PostCreatePayload",
+          field_name: "post",
+          deprecated: false,
+          resolver_times: [ { start_time: 0, duration: 0, } ],
+        },
+        {
+          type_name: "Post",
+          field_name: "id",
+          deprecated: false,
+          resolver_times: [ { start_time: 0, duration: 0, } ],
+        },
+        {
+          type_name: "Post",
+          field_name: "title",
+          deprecated: false,
+          resolver_times: [ { start_time: 0, duration: 0, } ],
+        },
+        {
+          type_name: "Post",
+          field_name: "body",
+          deprecated: false,
+          resolver_times: [ { start_time: 0, duration: 0, } ],
+        }
       ],
       arguments: [
         {
@@ -366,8 +446,18 @@ class InstrumentationTest < ActiveSupport::TestCase
 
     expected = {
       fields: [
-        { type_name: "QueryRoot", field_name: "node", deprecated: false, resolver_times: [0] },
-        { type_name: "Node", field_name: "id", deprecated: false, resolver_times: [0] },
+        {
+          type_name: "QueryRoot",
+          field_name: "node",
+          deprecated: false,
+          resolver_times: [ { start_time: 0, duration: 0, } ]
+        },
+        {
+          type_name: "Node",
+          field_name: "id",
+          deprecated: false,
+          resolver_times: [ { start_time: 0, duration: 0, } ]
+        },
       ],
     }
 
@@ -395,8 +485,18 @@ class InstrumentationTest < ActiveSupport::TestCase
 
     expected = {
       fields: [
-        { type_name: "QueryRoot", field_name: "node", deprecated: false, resolver_times: [0] },
-        { type_name: "Comment", field_name: "id", deprecated: false, resolver_times: [0] },
+        {
+          type_name: "QueryRoot",
+          field_name: "node",
+          deprecated: false,
+          resolver_times: [ { start_time: 0, duration: 0, } ]
+        },
+        {
+          type_name: "Comment",
+          field_name: "id",
+          deprecated: false,
+          resolver_times: [ { start_time: 0, duration: 0, } ]
+        },
       ],
     }
 
@@ -422,8 +522,28 @@ class InstrumentationTest < ActiveSupport::TestCase
 
     expected = {
       fields: [
-        { type_name: "QueryRoot", field_name: "nodes", deprecated: false, resolver_times: [0] },
-        { type_name: "Node", field_name: "id", deprecated: false, resolver_times: [0] },
+        {
+          type_name: "QueryRoot",
+          field_name: "nodes",
+          deprecated: false,
+          resolver_times: [
+            {
+              start_time: 0,
+              duration: 0
+            },
+          ],
+        },
+        {
+          type_name: "Node",
+          field_name: "id",
+          deprecated: false,
+          resolver_times: [
+            {
+              start_time: 0,
+              duration: 0
+            },
+          ],
+        },
       ],
     }
 
