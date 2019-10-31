@@ -1,7 +1,12 @@
 PATH
+  remote: ../../rmosolgo/graphql-ruby
+  specs:
+    graphql (1.9.14)
+
+PATH
   remote: .
   specs:
-    graphql-metrics (2.0.1)
+    graphql-metrics (3.0.0)
 
 GEM
   remote: https://rubygems.org/
@@ -17,10 +22,10 @@ GEM
     diffy (3.2.1)
     fakeredis (0.7.0)
       redis (>= 3.2, < 5.0)
-    graphql (1.8.4)
     graphql-batch (0.3.9)
       graphql (>= 0.8, < 2)
       promise.rb (~> 0.7.2)
+    hashdiff (1.0.0)
     i18n (1.0.1)
       concurrent-ruby (~> 1.0)
     metaclass (0.0.4)
@@ -51,9 +56,10 @@ DEPENDENCIES
   bundler (~> 1.16)
   diffy
   fakeredis
-  graphql (~> 1.8.2)
+  graphql (= 1.9.14)!
   graphql-batch
   graphql-metrics!
+  hashdiff
   minitest (~> 5.0)
   minitest-focus
   mocha
@@ -62,4 +68,4 @@ DEPENDENCIES
   rake
 
 BUNDLED WITH
-   1.16.3
+   1.17.3
