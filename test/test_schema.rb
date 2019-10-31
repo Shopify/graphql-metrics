@@ -6,6 +6,8 @@ class CommentLoader < GraphQL::Batch::Loader
   end
 
   def perform(ids)
+    sleep 2
+
     ids.flatten.each do |id|
       fulfill(id, { id: id, body: 'Great blog!' })
     end
@@ -13,15 +15,24 @@ class CommentLoader < GraphQL::Batch::Loader
 end
 
 class Comment < GraphQL::Schema::Object
-  implements GraphQL::Relay::Node.interface
+  implements GraphQL::Types::Relay::Node
   description "A blog comment"
 
   field :id, ID, null: false
   field :body, String, null: false
+
+  field :comments, [Comment], null: true do
+    argument :ids, [ID], required: false
+    argument :tags, [String], required: false
+  end
+
+  def comments(args)
+    CommentLoader.for(Comment).load_many(args[:ids]).then { |comments| comments }
+  end
 end
 
 class Post < GraphQL::Schema::Object
-  implements GraphQL::Relay::Node.interface
+  implements GraphQL::Types::Relay::Node
   description "A blog post"
 
   field :id, ID, null: false
@@ -46,9 +57,15 @@ class Post < GraphQL::Schema::Object
   end
 end
 
+class TagInput < GraphQL::Schema::InputObject
+  argument :handle, String, "Unique handle of the tag", required: true
+  argument :display_name, String, "Display name of the tag", required: true
+end
+
 class PostInput < GraphQL::Schema::InputObject
   argument :title, String, "Title for the post", required: true
   argument :body, String, "Body of the post", required: true
+  argument :embedded_tags, [TagInput], "Embedded tags on a post", required: true
 end
 
 class PostCreate < GraphQL::Schema::Mutation
@@ -57,6 +74,7 @@ class PostCreate < GraphQL::Schema::Mutation
   field :post, Post, null: false
 
   def resolve(post:)
+    sleep 2
     { post: { id: 42, title: post.title, body: post.body } }
   end
 end
@@ -66,8 +84,8 @@ class MutationRoot < GraphQL::Schema::Object
 end
 
 class QueryRoot < GraphQL::Schema::Object
-  field :node, field: GraphQL::Relay::Node.field
-  field :nodes, field: GraphQL::Relay::Node.plural_field
+  add_field(GraphQL::Types::Relay::NodeField)
+  add_field(GraphQL::Types::Relay::NodesField)
 
   field :post, Post, null: true do
     argument :id, ID, required: true

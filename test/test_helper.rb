@@ -12,6 +12,7 @@ require 'mocha/minitest'
 require 'pry'
 require 'ostruct'
 require 'diffy'
+require 'hashdiff'
 
 require "graphql_metrics"
 require 'graphql'
