@@ -77,6 +77,7 @@ class AnalyzerTest < ActiveSupport::TestCase
     tracer SimpleAnalyzer
   end
 
+  focus
   test 'extracts metrics from queries, as well as their fields and arguments' do
     query = GraphQL::Query.new(
       Schema,
@@ -99,10 +100,16 @@ class AnalyzerTest < ActiveSupport::TestCase
       {
         :operation_type=>"query",
         :operation_name=>"PostDetails",
-        :start_time=>SomeNumber.new(at_least: 1),
-        :duration=>SomeNumber.new(at_least: 2)
+        :query_start_time=>SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+        :query_end_time=>SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+        :query_duration=>SomeNumber.new(at_least: 2),
+        :parsing_start_time_offset=>SomeNumber.new(at_least: 0),
+        :parsing_duration=>SomeNumber.new(at_least: 0),
+        :validation_start_time_offset=>SomeNumber.new(at_least: 0),
+        :validation_duration=>SomeNumber.new(at_least: 0),
       }
     ]
+
     assert_equal expected_queries, actual_queries
 
     # NOTE: Formatted with https://codebeautify.org/ruby-formatter-beautifier
@@ -114,7 +121,7 @@ class AnalyzerTest < ActiveSupport::TestCase
       :deprecated => false,
       :path => ["post", "id"],
       :resolver_timings => [{
-        :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+        :start_time_offset => SomeNumber.new(at_least: 0),
         :duration => SomeNumber.new(at_least: 0)
       }],
       :lazy_resolver_timings => nil
@@ -125,7 +132,7 @@ class AnalyzerTest < ActiveSupport::TestCase
       :deprecated => false,
       :path => ["post", "title"],
       :resolver_timings => [{
-        :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+        :start_time_offset => SomeNumber.new(at_least: 0),
         :duration => SomeNumber.new(at_least: 0)
       }],
       :lazy_resolver_timings => nil
@@ -136,7 +143,7 @@ class AnalyzerTest < ActiveSupport::TestCase
       :deprecated => false,
       :path => ["post", "ignoredAlias"],
       :resolver_timings => [{
-        :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+        :start_time_offset => SomeNumber.new(at_least: 0),
         :duration => SomeNumber.new(at_least: 0)
       }],
       :lazy_resolver_timings => nil
@@ -147,7 +154,7 @@ class AnalyzerTest < ActiveSupport::TestCase
       :deprecated => true,
       :path => ["post", "deprecatedBody"],
       :resolver_timings => [{
-        :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+        :start_time_offset => SomeNumber.new(at_least: 0),
         :duration => SomeNumber.new(at_least: 0)
       }],
       :lazy_resolver_timings => nil
@@ -158,10 +165,10 @@ class AnalyzerTest < ActiveSupport::TestCase
       :deprecated => false,
       :path => ["post", "comments", "id"],
       :resolver_timings => [{
-        :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+        :start_time_offset => SomeNumber.new(at_least: 0),
         :duration => SomeNumber.new(at_least: 0)
       }, {
-        :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+        :start_time_offset => SomeNumber.new(at_least: 0),
         :duration => SomeNumber.new(at_least: 0)
       }],
       :lazy_resolver_timings => nil
@@ -172,10 +179,10 @@ class AnalyzerTest < ActiveSupport::TestCase
       :deprecated => false,
       :path => ["post", "comments", "body"],
       :resolver_timings => [{
-        :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+        :start_time_offset => SomeNumber.new(at_least: 0),
         :duration => SomeNumber.new(at_least: 0)
       }, {
-        :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+        :start_time_offset => SomeNumber.new(at_least: 0),
         :duration => SomeNumber.new(at_least: 0)
       }],
       :lazy_resolver_timings => nil
@@ -186,16 +193,16 @@ class AnalyzerTest < ActiveSupport::TestCase
       :deprecated => false,
       :path => ["post", "comments", "comments", "id"],
       :resolver_timings => [{
-        :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+        :start_time_offset => SomeNumber.new(at_least: 0),
         :duration => SomeNumber.new(at_least: 0)
       }, {
-        :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+        :start_time_offset => SomeNumber.new(at_least: 0),
         :duration => SomeNumber.new(at_least: 0)
       }, {
-        :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+        :start_time_offset => SomeNumber.new(at_least: 0),
         :duration => SomeNumber.new(at_least: 0)
       }, {
-        :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+        :start_time_offset => SomeNumber.new(at_least: 0),
         :duration => SomeNumber.new(at_least: 0)
       }],
       :lazy_resolver_timings => nil
@@ -206,16 +213,16 @@ class AnalyzerTest < ActiveSupport::TestCase
       :deprecated => false,
       :path => ["post", "comments", "comments", "body"],
       :resolver_timings => [{
-        :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+        :start_time_offset => SomeNumber.new(at_least: 0),
         :duration => SomeNumber.new(at_least: 0)
       }, {
-        :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+        :start_time_offset => SomeNumber.new(at_least: 0),
         :duration => SomeNumber.new(at_least: 0)
       }, {
-        :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+        :start_time_offset => SomeNumber.new(at_least: 0),
         :duration => SomeNumber.new(at_least: 0)
       }, {
-        :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+        :start_time_offset => SomeNumber.new(at_least: 0),
         :duration => SomeNumber.new(at_least: 0)
       }],
       :lazy_resolver_timings => nil
@@ -226,17 +233,17 @@ class AnalyzerTest < ActiveSupport::TestCase
       :deprecated => false,
       :path => ["post", "comments", "comments"],
       :resolver_timings => [{
-        :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+        :start_time_offset => SomeNumber.new(at_least: 0),
         :duration => SomeNumber.new(at_least: 0)
       }, {
-        :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+        :start_time_offset => SomeNumber.new(at_least: 0),
         :duration => SomeNumber.new(at_least: 0)
       }],
       :lazy_resolver_timings => [{
-        :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+        :start_time_offset => SomeNumber.new(at_least: 0),
         :duration => SomeNumber.new(at_least: 1)
       }, {
-        :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+        :start_time_offset => SomeNumber.new(at_least: 0),
         :duration => SomeNumber.new(at_least: 0)
       }]
     }, {
@@ -246,11 +253,11 @@ class AnalyzerTest < ActiveSupport::TestCase
       :deprecated => false,
       :path => ["post", "comments"],
       :resolver_timings => [{
-        :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+        :start_time_offset => SomeNumber.new(at_least: 0),
         :duration => SomeNumber.new(at_least: 0)
       }],
       :lazy_resolver_timings => [{
-        :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+        :start_time_offset => SomeNumber.new(at_least: 0),
         :duration => SomeNumber.new(at_least: 1)
       }]
     }, {
@@ -260,10 +267,10 @@ class AnalyzerTest < ActiveSupport::TestCase
       :deprecated => false,
       :path => ["post", "otherComments", "id"],
       :resolver_timings => [{
-        :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+        :start_time_offset => SomeNumber.new(at_least: 0),
         :duration => SomeNumber.new(at_least: 0)
       }, {
-        :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+        :start_time_offset => SomeNumber.new(at_least: 0),
         :duration => SomeNumber.new(at_least: 0)
       }],
       :lazy_resolver_timings => nil
@@ -274,10 +281,10 @@ class AnalyzerTest < ActiveSupport::TestCase
       :deprecated => false,
       :path => ["post", "otherComments", "body"],
       :resolver_timings => [{
-        :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+        :start_time_offset => SomeNumber.new(at_least: 0),
         :duration => SomeNumber.new(at_least: 0)
       }, {
-        :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+        :start_time_offset => SomeNumber.new(at_least: 0),
         :duration => SomeNumber.new(at_least: 0)
       }],
       :lazy_resolver_timings => nil
@@ -288,11 +295,11 @@ class AnalyzerTest < ActiveSupport::TestCase
       :deprecated => false,
       :path => ["post", "otherComments"],
       :resolver_timings => [{
-        :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+        :start_time_offset => SomeNumber.new(at_least: 0),
         :duration => SomeNumber.new(at_least: 0)
       }],
       :lazy_resolver_timings => [{
-        :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+        :start_time_offset => SomeNumber.new(at_least: 0),
         :duration => SomeNumber.new(at_least: 0)
       }]
     }, {
@@ -302,7 +309,7 @@ class AnalyzerTest < ActiveSupport::TestCase
       :deprecated => false,
       :path => ["post"],
       :resolver_timings => [{
-        :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+        :start_time_offset => SomeNumber.new(at_least: 0),
         :duration => SomeNumber.new(at_least: 0)
       }],
       :lazy_resolver_timings => nil
@@ -632,6 +639,7 @@ class AnalyzerTest < ActiveSupport::TestCase
     query_analyzer SimpleAnalyzer
   end
 
+  # focus
   test 'works as simple analyzer, gathering static metrics with no runtime data when the analyzer is not used as instrumentation and or a tracer' do
     query = GraphQL::Query.new(
       Schema2,
