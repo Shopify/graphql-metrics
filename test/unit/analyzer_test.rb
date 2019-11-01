@@ -100,7 +100,7 @@ class AnalyzerTest < ActiveSupport::TestCase
         :operation_type=>"query",
         :operation_name=>"PostDetails",
         :start_time=>SomeNumber.new(at_least: 1),
-        :duration=>SomeNumber.new(at_least: 4)
+        :duration=>SomeNumber.new(at_least: 2)
       }
     ]
     assert_equal expected_queries, actual_queries
@@ -234,7 +234,7 @@ class AnalyzerTest < ActiveSupport::TestCase
       }],
       :lazy_resolver_timings => [{
         :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
-        :duration => SomeNumber.new(at_least: 2)
+        :duration => SomeNumber.new(at_least: 1)
       }, {
         :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
         :duration => SomeNumber.new(at_least: 0)
@@ -251,7 +251,7 @@ class AnalyzerTest < ActiveSupport::TestCase
       }],
       :lazy_resolver_timings => [{
         :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
-        :duration => SomeNumber.new(at_least: 2)
+        :duration => SomeNumber.new(at_least: 1)
       }]
     }, {
       :field_name => "id",
@@ -556,7 +556,7 @@ class AnalyzerTest < ActiveSupport::TestCase
         :operation_type=>"mutation",
         :operation_name=>"PostCreate",
         :start_time=>SomeNumber.new(at_least: 1),
-        :duration=>SomeNumber.new(at_least: 2)
+        :duration=>SomeNumber.new(at_least: 1)
       }
     ]
     assert_equal expected_queries, actual_queries
@@ -593,7 +593,7 @@ class AnalyzerTest < ActiveSupport::TestCase
       :path => ["postCreate"],
       :resolver_timings => [{
         :start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
-        :duration => SomeNumber.new(at_least: 2)
+        :duration => SomeNumber.new(at_least: 1)
       }],
       :lazy_resolver_timings => nil
     }]

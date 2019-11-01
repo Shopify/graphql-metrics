@@ -3,15 +3,18 @@ module GraphQLMetrics
     FieldTimingCallback = Struct.new(:static_metrics, :callback, keyword_init: true)
 
     CONTEXT_NAMESPACE = :graphql_metrics_analysis
-    RUNTIME_METRICS_ENABLED = :runtime_metrics_enabled
-
-    QUERY_START_TIME_KEY = :query_start_time
-    QUERY_START_TIME_MONOTONIC_KEY = :query_start_time_monotonic
-    FIELD_TIMING_CALLBACKS_KEY = :field_timing_callbacks
     ANALYZER_INSTANCE_KEY = :analyzer_instance
 
-    # NOTE: These constants are used both to match tracing keys from graphql-ruby as well as to store in-line and lazy
-    # field resolution timings in context.
+    TIMINGS_CAPTURE_ENABLED = :timings_capture_enabled
+    QUERY_START_TIME_KEY = :query_start_time
+    QUERY_START_TIME_MONOTONIC_KEY = :query_start_time_monotonic
+
+    INLINE_FIELD_TIMINGS = :inline_field_timings
+    LAZY_FIELD_TIMINGS = :lazy_field_timings
+
+    FIELD_TIMING_CALLBACKS_KEY = :field_timing_callbacks
+
+    # NOTE: These constants come from the graphql ruby gem.
     GRAPHQL_TRACING_FIELD_KEY = 'execute_field'
     GRAPHQL_TRACING_LAZY_FIELD_KEY = 'execute_field_lazy'
 
@@ -29,12 +32,13 @@ module GraphQLMetrics
         return unless query.valid?
 
         query.context.namespace(CONTEXT_NAMESPACE).tap do |ns|
-          ns[RUNTIME_METRICS_ENABLED] = true
-          ns[FIELD_TIMING_CALLBACKS_KEY] = []
+          ns[TIMINGS_CAPTURE_ENABLED] = true
           ns[QUERY_START_TIME_KEY] = current_time
           ns[QUERY_START_TIME_MONOTONIC_KEY] = current_time_monotonic
-          ns[GRAPHQL_TRACING_FIELD_KEY] = {}
-          ns[GRAPHQL_TRACING_LAZY_FIELD_KEY] = {}
+          ns[INLINE_FIELD_TIMINGS] = {}
+          ns[LAZY_FIELD_TIMINGS] = {}
+
+          ns[FIELD_TIMING_CALLBACKS_KEY] = []
         end
       end
 
@@ -52,26 +56,32 @@ module GraphQLMetrics
         end
       end
 
-      def trace(key, data, &block)
+      def trace(key, data, &resolver_block)
         skip_tracing = data[:query]&.context&.fetch(:skip_graphql_metrics_analysis, false)
-        return block.call if skip_tracing || ![GRAPHQL_TRACING_FIELD_KEY, GRAPHQL_TRACING_LAZY_FIELD_KEY].include?(key)
-        # NOTE: We can't just check `runtime_metrics_enabled?` here, since .trace runs before `before_query`, i.e.
+        return resolver_block.call if skip_tracing || ![GRAPHQL_TRACING_FIELD_KEY, GRAPHQL_TRACING_LAZY_FIELD_KEY].include?(key)
+        # NOTE: We can't just check `timings_capture_enabled?` here, since .trace runs before `before_query`, i.e.
         # during lexing, parsing, validation etc., and `before_query` doesn't run until `execute_multiplex`.
 
-        if runtime_metrics_enabled?(data[:query]&.context)
-          trace_field(key, data, block, key)
+        if timings_capture_enabled?(data[:query]&.context)
+          context_key = case key
+          when GRAPHQL_TRACING_FIELD_KEY
+            INLINE_FIELD_TIMINGS
+          when GRAPHQL_TRACING_LAZY_FIELD_KEY
+            LAZY_FIELD_TIMINGS
+          end
+
+          trace_field(context_key, data, resolver_block)
         else
-          block.call
+          resolver_block.call
         end
       end
 
-      def trace_field(_key, data, block, context_key)
+      def trace_field(context_key, data, resolver_block)
         path_excluding_numeric_indicies = data[:path].select { |p| p.is_a?(String) }
 
         start_time = current_time
         start_time_monotonic = current_time_monotonic
-
-        result = block.call
+        result = resolver_block.call
         duration = current_time_monotonic - start_time_monotonic
 
         data[:query].context.namespace(CONTEXT_NAMESPACE).tap do |ns|
@@ -82,9 +92,9 @@ module GraphQLMetrics
         result
       end
 
-      def runtime_metrics_enabled?(context)
+      def timings_capture_enabled?(context)
         return false unless context
-        !!context.namespace(CONTEXT_NAMESPACE)[RUNTIME_METRICS_ENABLED]
+        !!context.namespace(CONTEXT_NAMESPACE)[TIMINGS_CAPTURE_ENABLED]
       end
     end
 
@@ -128,11 +138,11 @@ module GraphQLMetrics
         path: visitor.response_path,
       }
 
-      if self.class.runtime_metrics_enabled?(visitor.query.context)
+      if self.class.timings_capture_enabled?(visitor.query.context)
         callback = -> (metrics) {
           visitor.query.context.namespace(CONTEXT_NAMESPACE).tap do |ns|
-            resolver_timings = ns[GRAPHQL_TRACING_FIELD_KEY][metrics[:path]]
-            lazy_field_timing = ns[GRAPHQL_TRACING_LAZY_FIELD_KEY][metrics[:path]]
+            resolver_timings = ns[INLINE_FIELD_TIMINGS][metrics[:path]]
+            lazy_field_timing = ns[LAZY_FIELD_TIMINGS][metrics[:path]]
 
             metrics = metrics.merge(
               resolver_timings: resolver_timings,
@@ -180,7 +190,7 @@ module GraphQLMetrics
     end
 
     def result
-      unless self.class.runtime_metrics_enabled?(@query.context)
+      unless self.class.timings_capture_enabled?(@query.context)
         # If this class is not used as instrumentation and tracing, we still need to flush static query metrics
         # somewhere other than `after_query`.
         @query.context.namespace(CONTEXT_NAMESPACE).tap do |ns|

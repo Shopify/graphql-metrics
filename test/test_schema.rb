@@ -6,7 +6,7 @@ class CommentLoader < GraphQL::Batch::Loader
   end
 
   def perform(ids)
-    sleep 2
+    sleep 1
 
     ids.flatten.each do |id|
       fulfill(id, { id: id, body: 'Great blog!' })
@@ -74,7 +74,7 @@ class PostCreate < GraphQL::Schema::Mutation
   field :post, Post, null: false
 
   def resolve(post:)
-    sleep 2
+    sleep 1
     { post: { id: 42, title: post.title, body: post.body } }
   end
 end
