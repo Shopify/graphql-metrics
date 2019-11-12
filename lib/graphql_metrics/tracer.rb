@@ -16,21 +16,30 @@ module GraphQLMetrics
     ]
 
     def self.trace(key, data, &resolver_block)
-      skip_tracing = data[:query]&.context&.fetch(:skip_graphql_metrics_analysis, false)
+      # NOTE: Context doesn't exist yet during lexing, parsing.
+      possible_context = data[:query]&.context
+
+      skip_tracing = possible_context&.fetch(GraphQLMetrics::SKIP_GRAPHQL_METRICS_ANALYSIS, false)
       return resolver_block.call if skip_tracing
 
       return setup_tracing_before_lexing(resolver_block) if key == GRAPHQL_GEM_LEXING_KEY
       return capture_parsing_time(resolver_block) if key == GRAPHQL_GEM_PARSING_KEY
 
+      context = possible_context || data[:multiplex].queries.first.context
+
       if GRAPHQL_GEM_VALIDATION_KEYS.include?(key)
-        context = data[:query]&.context || data[:multiplex].queries.first.context
         return resolver_block.call unless context.query.valid?
         return capture_validation_time(context, resolver_block)
       end
 
-      return resolver_block.call unless GRAPHQL_GEM_TRACING_FIELD_KEYS.include?(key)
+      field_being_traced = GRAPHQL_GEM_TRACING_FIELD_KEYS.include?(key)
 
-      self.pre_context = nil # cattr values no longer needed, everything we need is in context by now.
+      if !field_being_traced || field_being_traced && !GraphQLMetrics.timings_capture_enabled?(context)
+        return resolver_block.call
+      end
+
+      # NOTE: cattr values no longer needed, everything we need is in context by now.
+      self.pre_context = nil
 
       context_key = case key
       when GRAPHQL_GEM_TRACING_FIELD_KEY
@@ -39,15 +48,7 @@ module GraphQLMetrics
         GraphQLMetrics::LAZY_FIELD_TIMINGS
       end
 
-      if GraphQLMetrics.timings_capture_enabled?(data[:query].context)
-        trace_field(context_key, data, resolver_block)
-      else
-        resolver_block.call
-      end
-
-    rescue => e
-      binding.pry
-      puts
+      trace_field(context_key, data, resolver_block)
     end
 
     private
@@ -71,9 +72,6 @@ module GraphQLMetrics
       end
 
       result
-    rescue => e
-      binding.pry
-      puts
     end
 
     def self.setup_tracing_before_lexing(resolver_block)
@@ -89,9 +87,6 @@ module GraphQLMetrics
       self.pre_context.value.query_start_time_monotonic = GraphQLMetrics.current_time_monotonic
 
       resolver_block.call
-    rescue => e
-      binding.pry
-      puts
     end
 
     def self.capture_parsing_time(resolver_block)
@@ -132,9 +127,6 @@ module GraphQLMetrics
       end
 
       result
-    rescue => e
-      binding.pry
-      puts
     end
   end
 end

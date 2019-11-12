@@ -17,16 +17,12 @@ module GraphQLMetrics
     end
 
     def analyze?
-      query.valid? && query.context[:skip_graphql_metrics_analysis] != true
+      query.valid? && query.context[GraphQLMetrics::SKIP_GRAPHQL_METRICS_ANALYSIS] != true
     end
 
     def extract_query(runtime_query_metrics: {}, context:)
       query_extracted(@static_query_metrics.merge(runtime_query_metrics))
     end
-
-    # TODO: Apollo Tracing spec https://docs.google.com/document/d/1B0dR09CcN_M4yqezkJ7VFPI-mKgQIVCt9PiUcIMEVNI/edit
-    # Do so after integrating with Shopify/shopify, since we'll need another Instrumentation class to dig out values
-    # left in memory by Analyzer.
 
     def on_enter_operation_definition(_node, _parent, visitor)
       @static_query_metrics = {

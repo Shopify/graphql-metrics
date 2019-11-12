@@ -7,8 +7,7 @@ module GraphQLMetrics
     FIELD_TIMING_CALLBACKS_KEY = :field_timing_callbacks
 
     def before_query(query)
-      return if query.context[:skip_graphql_metrics_analysis]
-      return unless query.valid?
+      return if query.context[GraphQLMetrics::SKIP_GRAPHQL_METRICS_ANALYSIS]
 
       query.context.namespace(CONTEXT_NAMESPACE).tap do |ns|
         ns[GraphQLMetrics::TIMINGS_CAPTURE_ENABLED] = true
@@ -18,8 +17,7 @@ module GraphQLMetrics
     end
 
     def after_query(query)
-      return if query.context[:skip_graphql_metrics_analysis]
-      return unless query.valid?
+      return if query.context[GraphQLMetrics::SKIP_GRAPHQL_METRICS_ANALYSIS]
 
       query.context.namespace(CONTEXT_NAMESPACE).tap do |ns|
         query_duration = GraphQLMetrics.current_time_monotonic - ns[GraphQLMetrics::QUERY_START_TIME_MONOTONIC]
