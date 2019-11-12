@@ -1,8 +1,23 @@
 # frozen_string_literal: true
 
+# Execution order:
+# When used as instrumentation, an analyzer and tracing, the order of execution is:
+
+# * before_query (context setup)
+# * initialize (bit more context setup, instance vars setup)
+# * after_query (call query and field callbacks, now that we have all static and runtime metrics gathered)
+# * extract_query
+# * extract_fields_with_runtime_metrics
+#   * calls field_extracted n times
+#
+# When used as a simple analyzer, which doesn't gather or emit any runtime metrics (timings, arg values):
+# * initialize
+# * result
+# * extract_query
+
 module GraphQLMetrics
   class Analyzer < GraphQL::Analysis::AST::Analyzer
-    # TODO: Document execution order.
+    # TODO: Document execution order?
 
     def initialize(query_or_multiplex)
       super
@@ -32,6 +47,10 @@ module GraphQLMetrics
     end
 
     def on_leave_field(node, _parent, visitor)
+      # NOTE: @rmosolgo "I think it could be reduced to `arguments = visitor.arguments_for(ast_node)`"
+      arguments = visitor.arguments_for(node, visitor.field_definition)
+      extract_arguments(arguments.argument_values.values, visitor.field_definition)
+
       static_metrics = {
         field_name: node.name,
         return_type_name: visitor.type_definition.name,
@@ -41,14 +60,13 @@ module GraphQLMetrics
       }
 
       if GraphQLMetrics.timings_capture_enabled?(visitor.query.context)
-        # NOTE: Emit these metrics later, once we have runtime metrics like field resolver timings.
         @static_field_metrics << static_metrics
       else
         field_extracted(static_metrics)
       end
     end
 
-    def combine_and_log_static_and_runtime_field_metrics(context)
+    def extract_fields_with_runtime_metrics(context)
       @static_field_metrics.each do |static_metrics|
         context.namespace(CONTEXT_NAMESPACE).tap do |ns|
           resolver_timings = ns[GraphQLMetrics::INLINE_FIELD_TIMINGS][static_metrics[:path]]
@@ -64,30 +82,6 @@ module GraphQLMetrics
       end
     end
 
-    # TODO: This is not called when argument is an input object field, provided by variables
-    # See https://github.com/rmosolgo/graphql-ruby/pull/2574/files#diff-c845a0b55ef57645aa53df4e3836bc96R281
-    def on_leave_argument(node, parent, visitor)
-      argument_values = visitor.arguments_for(parent, visitor.field_definition).argument_values
-      value = argument_values[node.name]
-
-      # TODO: value cannot be easily obtained if the argument is a nested input object field.
-      # See https://github.com/rmosolgo/graphql-ruby/issues/2573#issuecomment-548418296
-      value_metrics = if value
-        { value_is_null: value.value.nil?, value: value, default_used: value.default_used? }
-      else
-        { value_is_null: 'FIXME', value: 'FIXME', default_used: 'FIXME' }
-      end
-
-      static_metrics = {
-        argument_name: node.name,
-        argument_type_name: visitor.argument_definition.type.unwrap.to_s,
-        parent_field_name: visitor.field_definition.name,
-        parent_field_type_name: visitor.parent_type_definition.name,
-      }
-
-      argument_extracted(static_metrics.merge(value_metrics))
-    end
-
     def result
       unless GraphQLMetrics.timings_capture_enabled?(@query.context)
         # NOTE: If we're running as a static analyzer (i.e. not with instrumentation and tracing), we still need to
@@ -97,6 +91,44 @@ module GraphQLMetrics
           analyzer.extract_query(context: @query.context)
         end
       end
+    end
+
+    private
+
+    def extract_arguments(value, field_defn)
+      case value
+      when Array
+        value.each do |v|
+          extract_arguments(v, field_defn)
+        end
+      when Hash
+        value.each_value do |v|
+          extract_arguments(v, field_defn)
+        end
+      when ::GraphQL::Query::Arguments
+        value.each_value do |arg_val|
+          extract_arguments(arg_val, field_defn)
+        end
+      when ::GraphQL::Query::Arguments::ArgumentValue
+        extract_argument(value, field_defn)
+        extract_arguments(value.value, field_defn)
+      when ::GraphQL::Schema::InputObject
+        extract_arguments(value.arguments.argument_values.values, field_defn)
+      end
+    end
+
+    def extract_argument(value, field_defn)
+      static_metrics = {
+        argument_name: value.definition.expose_as,
+        argument_type_name: value.definition.type.unwrap.to_s,
+        parent_field_name: field_defn.name,
+        parent_field_type_name: field_defn.metadata[:type_class].owner.graphql_name,
+        default_used: value.default_used?,
+        value_is_null: value.value.nil?,
+        value: value,
+      }
+
+      argument_extracted(static_metrics)
     end
   end
 end

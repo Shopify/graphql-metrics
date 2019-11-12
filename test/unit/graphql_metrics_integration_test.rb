@@ -3,7 +3,7 @@
 require "test_helper"
 require "test_schema"
 
-class AnalyzerTest < ActiveSupport::TestCase
+class GraphQLMetricsIntegrationTest < ActiveSupport::TestCase
   REASONABLY_RECENT_UNIX_TIME = 1571337000 # aka 2019-10-17 in Unix time.
   SMALL_NONZERO_NUMBER = Float::EPSILON # aka 2.220446049250313e-16
 
@@ -327,59 +327,75 @@ class AnalyzerTest < ActiveSupport::TestCase
     )
 
     expected_arguments = [{
-      :argument_name => "id",
-      :argument_type_name => "ID",
-      :default_used => false,
-      :parent_field_name => "post",
-      :parent_field_type_name => "QueryRoot",
-      :value_is_null => false,
-      :value => SomeArgumentValue.new,
-    }, {
       :argument_name => "upcase",
       :argument_type_name => "Boolean",
-      :default_used => false,
       :parent_field_name => "title",
       :parent_field_type_name => "Post",
+      :default_used => false,
+      :value_is_null => false,
+      :value => SomeArgumentValue.new,
+    }, {
+      :argument_name => "truncate",
+      :argument_type_name => "Boolean",
+      :parent_field_name => "body",
+      :parent_field_type_name => "Post",
+      :default_used => true,
       :value_is_null => false,
       :value => SomeArgumentValue.new,
     }, {
       :argument_name => "ids",
       :argument_type_name => "ID",
-      :default_used => false,
       :parent_field_name => "comments",
-      :parent_field_type_name => "Post",
+      :parent_field_type_name => "Comment",
+      :default_used => false,
       :value_is_null => false,
       :value => SomeArgumentValue.new,
     }, {
       :argument_name => "tags",
       :argument_type_name => "String",
-      :default_used => false,
       :parent_field_name => "comments",
-      :parent_field_type_name => "Post",
+      :parent_field_type_name => "Comment",
+      :default_used => false,
       :value_is_null => true,
       :value => SomeArgumentValue.new,
     }, {
       :argument_name => "ids",
       :argument_type_name => "ID",
-      :default_used => false,
       :parent_field_name => "comments",
-      :parent_field_type_name => "Comment",
+      :parent_field_type_name => "Post",
+      :default_used => false,
       :value_is_null => false,
       :value => SomeArgumentValue.new,
     }, {
       :argument_name => "tags",
       :argument_type_name => "String",
-      :default_used => false,
       :parent_field_name => "comments",
-      :parent_field_type_name => "Comment",
+      :parent_field_type_name => "Post",
+      :default_used => false,
       :value_is_null => true,
       :value => SomeArgumentValue.new,
     }, {
       :argument_name => "ids",
       :argument_type_name => "ID",
-      :default_used => false,
       :parent_field_name => "comments",
       :parent_field_type_name => "Post",
+      :default_used => false,
+      :value_is_null => false,
+      :value => SomeArgumentValue.new,
+    }, {
+      :argument_name => "id",
+      :argument_type_name => "ID",
+      :parent_field_name => "post",
+      :parent_field_type_name => "QueryRoot",
+      :default_used => false,
+      :value_is_null => false,
+      :value => SomeArgumentValue.new,
+    }, {
+      :argument_name => "locale",
+      :argument_type_name => "String",
+      :parent_field_name => "post",
+      :parent_field_type_name => "QueryRoot",
+      :default_used => true,
       :value_is_null => false,
       :value => SomeArgumentValue.new,
     }]
@@ -444,7 +460,6 @@ class AnalyzerTest < ActiveSupport::TestCase
     results = query.context[:simple_extractor_results]
     actual_arguments = results[:arguments]
 
-    # NOTE: This test is passing simply to demonstrate the below `FIXME` argument value-related metrics.
     assert_equal(
       shared_expected_arguments_metrics,
       actual_arguments,
@@ -479,12 +494,6 @@ class AnalyzerTest < ActiveSupport::TestCase
     results = query.context[:simple_extractor_results]
     actual_arguments = results[:arguments]
 
-    # NOTE: This test is failing to demonstrate the issue of input object fields not triggering the AST visitor's
-    # on_enter/exit_argument hook.
-
-    more_than_one_arg_extracted = actual_arguments.size > 1
-    assert more_than_one_arg_extracted
-
     assert_equal(
       shared_expected_arguments_metrics,
       actual_arguments,
@@ -492,61 +501,61 @@ class AnalyzerTest < ActiveSupport::TestCase
     )
   end
 
-  # Note: the arguments metrics extracted should be the same, whether the query provided input object args inline or
+  # Note: Arguments metrics extracted should be the same, whether the query provided input object args inline or
   # via variables.
   def shared_expected_arguments_metrics
     [{
+      :argument_name => "post",
+      :argument_type_name => "PostInput",
+      :parent_field_name => "postCreate",
+      :parent_field_type_name => "MutationRoot",
+      :default_used => false,
+      :value_is_null => false,
+      :value => SomeArgumentValue.new,
+    }, {
       :argument_name => "title",
       :argument_type_name => "String",
       :parent_field_name => "postCreate",
       :parent_field_type_name => "MutationRoot",
-      :value_is_null => "FIXME",
-      :value => "FIXME",
-      :default_used => "FIXME"
+      :default_used => false,
+      :value_is_null => false,
+      :value => SomeArgumentValue.new,
     }, {
       :argument_name => "body",
       :argument_type_name => "String",
       :parent_field_name => "postCreate",
       :parent_field_type_name => "MutationRoot",
-      :value_is_null => "FIXME",
-      :value => "FIXME",
-      :default_used => "FIXME"
-    }, {
-      :argument_name => "handle",
-      :argument_type_name => "String",
-      :parent_field_name => "postCreate",
-      :parent_field_type_name => "MutationRoot",
-      :value_is_null => "FIXME",
-      :value => "FIXME",
-      :default_used => "FIXME"
-    }, {
-      :argument_name => "displayName",
-      :argument_type_name => "String",
-      :parent_field_name => "postCreate",
-      :parent_field_type_name => "MutationRoot",
-      :value_is_null => "FIXME",
-      :value => "FIXME",
-      :default_used => "FIXME"
+      :default_used => false,
+      :value_is_null => false,
+      :value => SomeArgumentValue.new,
     }, {
       :argument_name => "embeddedTags",
       :argument_type_name => "TagInput",
       :parent_field_name => "postCreate",
       :parent_field_type_name => "MutationRoot",
-      :value_is_null => "FIXME",
-      :value => "FIXME",
-      :default_used => "FIXME"
-    }, {
-      :argument_name => "post",
-      :argument_type_name => "PostInput",
-      :parent_field_name => "postCreate",
-      :parent_field_type_name => "MutationRoot",
+      :default_used => false,
       :value_is_null => false,
       :value => SomeArgumentValue.new,
+    }, {
+      :argument_name => "handle",
+      :argument_type_name => "String",
+      :parent_field_name => "postCreate",
+      :parent_field_type_name => "MutationRoot",
       :default_used => false,
+      :value_is_null => false,
+      :value => SomeArgumentValue.new,
+    }, {
+      :argument_name => "displayName",
+      :argument_type_name => "String",
+      :parent_field_name => "postCreate",
+      :parent_field_type_name => "MutationRoot",
+      :default_used => false,
+      :value_is_null => false,
+      :value => SomeArgumentValue.new,
     }]
   end
 
-  test 'extracts metrics from mutations' do
+  test 'extracts metrics from mutations, input objects' do
     query = GraphQL::Query.new(
       Schema,
       mutation_document,
@@ -634,9 +643,49 @@ class AnalyzerTest < ActiveSupport::TestCase
     expected_arguments = [{
       :argument_name => "post",
       :argument_type_name => "PostInput",
-      :default_used => false,
       :parent_field_name => "postCreate",
       :parent_field_type_name => "MutationRoot",
+      :default_used => false,
+      :value_is_null => false,
+      :value => SomeArgumentValue.new,
+    }, {
+      :argument_name => "title",
+      :argument_type_name => "String",
+      :parent_field_name => "postCreate",
+      :parent_field_type_name => "MutationRoot",
+      :default_used => false,
+      :value_is_null => false,
+      :value => SomeArgumentValue.new,
+    }, {
+      :argument_name => "body",
+      :argument_type_name => "String",
+      :parent_field_name => "postCreate",
+      :parent_field_type_name => "MutationRoot",
+      :default_used => false,
+      :value_is_null => false,
+      :value => SomeArgumentValue.new,
+    }, {
+      :argument_name => "embeddedTags",
+      :argument_type_name => "TagInput",
+      :parent_field_name => "postCreate",
+      :parent_field_type_name => "MutationRoot",
+      :default_used => false,
+      :value_is_null => false,
+      :value => SomeArgumentValue.new,
+    }, {
+      :argument_name => "handle",
+      :argument_type_name => "String",
+      :parent_field_name => "postCreate",
+      :parent_field_type_name => "MutationRoot",
+      :default_used => false,
+      :value_is_null => false,
+      :value => SomeArgumentValue.new,
+    }, {
+      :argument_name => "displayName",
+      :argument_type_name => "String",
+      :parent_field_name => "postCreate",
+      :parent_field_type_name => "MutationRoot",
+      :default_used => false,
       :value_is_null => false,
       :value => SomeArgumentValue.new,
     }]
@@ -779,59 +828,75 @@ class AnalyzerTest < ActiveSupport::TestCase
     )
 
     expected_arguments = [{
-      :argument_name => "id",
-      :argument_type_name => "ID",
-      :default_used => false,
-      :parent_field_name => "post",
-      :parent_field_type_name => "QueryRoot",
-      :value_is_null => false,
-      :value => SomeArgumentValue.new,
-    }, {
       :argument_name => "upcase",
       :argument_type_name => "Boolean",
-      :default_used => false,
       :parent_field_name => "title",
       :parent_field_type_name => "Post",
+      :default_used => false,
+      :value_is_null => false,
+      :value => SomeArgumentValue.new,
+    }, {
+      :argument_name => "truncate",
+      :argument_type_name => "Boolean",
+      :parent_field_name => "body",
+      :parent_field_type_name => "Post",
+      :default_used => true,
       :value_is_null => false,
       :value => SomeArgumentValue.new,
     }, {
       :argument_name => "ids",
       :argument_type_name => "ID",
-      :default_used => false,
       :parent_field_name => "comments",
-      :parent_field_type_name => "Post",
+      :parent_field_type_name => "Comment",
+      :default_used => false,
       :value_is_null => false,
       :value => SomeArgumentValue.new,
     }, {
       :argument_name => "tags",
       :argument_type_name => "String",
-      :default_used => false,
       :parent_field_name => "comments",
-      :parent_field_type_name => "Post",
+      :parent_field_type_name => "Comment",
+      :default_used => false,
       :value_is_null => true,
       :value => SomeArgumentValue.new,
     }, {
       :argument_name => "ids",
       :argument_type_name => "ID",
-      :default_used => false,
       :parent_field_name => "comments",
-      :parent_field_type_name => "Comment",
+      :parent_field_type_name => "Post",
+      :default_used => false,
       :value_is_null => false,
       :value => SomeArgumentValue.new,
     }, {
       :argument_name => "tags",
       :argument_type_name => "String",
-      :default_used => false,
       :parent_field_name => "comments",
-      :parent_field_type_name => "Comment",
+      :parent_field_type_name => "Post",
+      :default_used => false,
       :value_is_null => true,
       :value => SomeArgumentValue.new,
     }, {
       :argument_name => "ids",
       :argument_type_name => "ID",
-      :default_used => false,
       :parent_field_name => "comments",
       :parent_field_type_name => "Post",
+      :default_used => false,
+      :value_is_null => false,
+      :value => SomeArgumentValue.new,
+    }, {
+      :argument_name => "id",
+      :argument_type_name => "ID",
+      :parent_field_name => "post",
+      :parent_field_type_name => "QueryRoot",
+      :default_used => false,
+      :value_is_null => false,
+      :value => SomeArgumentValue.new,
+    }, {
+      :argument_name => "locale",
+      :argument_type_name => "String",
+      :parent_field_name => "post",
+      :parent_field_type_name => "QueryRoot",
+      :default_used => true,
       :value_is_null => false,
       :value => SomeArgumentValue.new,
     }]
