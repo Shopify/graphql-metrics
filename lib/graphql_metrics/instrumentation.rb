@@ -35,7 +35,7 @@ module GraphQLMetrics
 
         analyzer = ns[GraphQLMetrics::ANALYZER_INSTANCE_KEY]
         analyzer.extract_query(runtime_query_metrics: runtime_query_metrics, context: query.context)
-        analyzer.combine_and_log_static_and_runtime_field_metrics(query.context)
+        analyzer.extract_fields_with_runtime_metrics(query.context)
       end
     end
   end
