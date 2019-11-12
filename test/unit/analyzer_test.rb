@@ -76,6 +76,11 @@ class AnalyzerTest < ActiveSupport::TestCase
     instrument :query, GraphQLMetrics::Instrumentation
     query_analyzer SimpleAnalyzer
     tracer GraphQLMetrics::Tracer
+
+    def self.parse_error(err, _context)
+      return if err.is_a?(GraphQL::ParseError)
+      raise err
+    end
   end
 
   test 'extracts metrics from queries, as well as their fields and arguments' do
@@ -386,7 +391,17 @@ class AnalyzerTest < ActiveSupport::TestCase
     )
   end
 
-  test 'skips analysis, if the query is invalid' do
+  test 'skips analysis, if the query is syntactically invalid' do
+    query = GraphQL::Query.new(
+      Schema,
+      'HELLO',
+    )
+
+    analysis_results = GraphQL::Analysis::AST.analyze_query(query, [SimpleAnalyzer]).first
+    assert_nil analysis_results
+  end
+
+  test 'skips analysis, if the query is semantically invalid' do
     query = GraphQL::Query.new(
       Schema,
       '{ foo { bar } }',
