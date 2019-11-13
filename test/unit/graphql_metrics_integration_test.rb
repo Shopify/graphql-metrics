@@ -73,9 +73,7 @@ class GraphQLMetricsIntegrationTest < ActiveSupport::TestCase
     use GraphQL::Execution::Interpreter
     use GraphQL::Analysis::AST
 
-    instrument :query, GraphQLMetrics::Instrumentation
-    query_analyzer SimpleAnalyzer
-    tracer GraphQLMetrics::Tracer
+    use GraphQLMetrics
 
     def self.parse_error(err, _context)
       return if err.is_a?(GraphQL::ParseError)
@@ -83,6 +81,7 @@ class GraphQLMetricsIntegrationTest < ActiveSupport::TestCase
     end
   end
 
+  focus
   test 'extracts metrics from queries, as well as their fields and arguments' do
     query = GraphQL::Query.new(
       Schema,

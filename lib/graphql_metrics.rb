@@ -27,6 +27,13 @@ module GraphQLMetrics
   INLINE_FIELD_TIMINGS = :inline_field_timings
   LAZY_FIELD_TIMINGS = :lazy_field_timings
 
+  def self.use(schema_defn_proxy)
+    schema_defn = schema_defn_proxy.target
+    schema_defn.instrument(:query, Instrumentation)
+    schema_defn.query_analyzers << Analyzer
+    schema_defn.tracers << Tracer
+  end
+
   def self.timings_capture_enabled?(context)
     return false unless context
     !!context.namespace(CONTEXT_NAMESPACE)[TIMINGS_CAPTURE_ENABLED]

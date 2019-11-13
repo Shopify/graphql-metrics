@@ -28,6 +28,8 @@ module GraphQLMetrics
     def initialize(query_or_multiplex)
       super
 
+      raise 'hi'
+
       query_or_multiplex.context.namespace(CONTEXT_NAMESPACE).tap do |ns|
         ns[ANALYZER_INSTANCE_KEY] = self
       end
