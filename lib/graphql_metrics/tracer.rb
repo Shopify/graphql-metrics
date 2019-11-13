@@ -56,7 +56,8 @@ module GraphQLMetrics
     def self.trace_field(context_key, data, resolver_block)
       path_excluding_numeric_indicies = data[:path].select { |p| p.is_a?(String) }
 
-      query_start_time_monotonic = data[:query].context.namespace(GraphQLMetrics::CONTEXT_NAMESPACE)[GraphQLMetrics::QUERY_START_TIME_MONOTONIC]
+      query_start_time_monotonic = data[:query].context
+        .namespace(GraphQLMetrics::CONTEXT_NAMESPACE)[GraphQLMetrics::QUERY_START_TIME_MONOTONIC]
 
       field_start_time_monotonic = GraphQLMetrics.current_time_monotonic
       field_start_time_offset = field_start_time_monotonic - query_start_time_monotonic
@@ -75,13 +76,6 @@ module GraphQLMetrics
     end
 
     def self.setup_tracing_before_lexing(resolver_block)
-      # NOTE: `before_query` and `initialize` run after trace w/ `lex` key
-      # It seems the only alternative to starting query timing here would be to ask users to pass wall / monotonic
-      # clock times in their query context. Seems like a worse experience than us just assuming query start times
-      # begin in lexing phase.
-
-      # See http://ruby-concurrency.github.io/concurrent-ruby/master/Concurrent/ThreadLocalVar.html
-      # Using this to overcome issue of using cattr.
       self.pre_context = Concurrent::ThreadLocalVar.new(OpenStruct.new)
       self.pre_context.value.query_start_time = GraphQLMetrics.current_time
       self.pre_context.value.query_start_time_monotonic = GraphQLMetrics.current_time_monotonic
@@ -90,7 +84,8 @@ module GraphQLMetrics
     end
 
     def self.capture_parsing_time(resolver_block)
-      # NOTE: Need to store timings on class attributes, since there's no query context available during parsing.
+      # NOTE: Storing pre-validation timings on class attributes, since there's no query context available during
+      # parsing phase.
 
       parsing_start_time_monotonic = GraphQLMetrics.current_time_monotonic
 
@@ -122,7 +117,8 @@ module GraphQLMetrics
         ns[PARSING_DURATION] = self.pre_context.value.parsing_duration
         ns[VALIDATION_START_TIME_OFFSET] = validation_start_time_offset
 
-        # NOTE: We add up times spent validating the query syntax as well as running all analyzers
+        # NOTE: We add up times spent validating the query syntax as well as running all analyzers.
+        # This applies to all tracer steps with keys including GRAPHQL_GEM_VALIDATION_KEYS.
         ns[GraphQLMetrics::VALIDATION_DURATION] = validation_duration + previous_validation_duration
       end
 

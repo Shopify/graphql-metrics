@@ -4,8 +4,6 @@ module GraphQLMetrics
   module Instrumentation
     module_function
 
-    FIELD_TIMING_CALLBACKS_KEY = :field_timing_callbacks
-
     def before_query(query)
       return if query.context[GraphQLMetrics::SKIP_GRAPHQL_METRICS_ANALYSIS]
 
