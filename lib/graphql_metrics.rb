@@ -6,13 +6,18 @@ require "graphql_metrics/instrumentation"
 require "graphql_metrics/tracer"
 require "graphql_metrics/analyzer"
 
-# NOTE: Shared constants & utility methods
 module GraphQLMetrics
+  # The context namespace for all values stored by this gem.
   CONTEXT_NAMESPACE = :graphql_metrics_analysis
-  ANALYZER_INSTANCE_KEY = :analyzer_instance
-  TIMINGS_CAPTURE_ENABLED = :timings_capture_enabled
+
+  # Skip metrics capture altogher, by setting `skip_graphql_metrics_analysis: true` in query context.
   SKIP_GRAPHQL_METRICS_ANALYSIS = :skip_graphql_metrics_analysis
 
+  # Timings related constants.
+  TIMINGS_CAPTURE_ENABLED = :timings_capture_enabled
+  ANALYZER_INSTANCE_KEY = :analyzer_instance
+
+  # Context keys to store timings for query phases of execution, field resolver timings.
   QUERY_START_TIME = :query_start_time
   QUERY_START_TIME_MONOTONIC = :query_start_time_monotonic
   PARSING_START_TIME_OFFSET = :parsing_start_time_offset
