@@ -65,7 +65,7 @@ class GraphQLMetricsIntegrationTest < ActiveSupport::TestCase
     end
   end
 
-  class Schema < GraphQL::Schema
+  class SchemaWithFullMetrics < GraphQL::Schema
     query QueryRoot
     mutation MutationRoot
 
@@ -85,7 +85,7 @@ class GraphQLMetricsIntegrationTest < ActiveSupport::TestCase
 
   test 'extracts metrics from queries, as well as their fields and arguments' do
     query = GraphQL::Query.new(
-      Schema,
+      SchemaWithFullMetrics,
       kitchen_sink_query_document,
       variables: { 'postId': '1', 'titleUpcase': true },
       operation_name: 'PostDetails',
@@ -408,7 +408,7 @@ class GraphQLMetricsIntegrationTest < ActiveSupport::TestCase
 
   test 'skips analysis, if the query is syntactically invalid' do
     query = GraphQL::Query.new(
-      Schema,
+      SchemaWithFullMetrics,
       'HELLO',
     )
 
@@ -418,7 +418,7 @@ class GraphQLMetricsIntegrationTest < ActiveSupport::TestCase
 
   test 'skips analysis, if the query is semantically invalid' do
     query = GraphQL::Query.new(
-      Schema,
+      SchemaWithFullMetrics,
       '{ foo { bar } }',
     )
 
@@ -428,7 +428,7 @@ class GraphQLMetricsIntegrationTest < ActiveSupport::TestCase
 
   test 'skips analysis, instrumentation and tracing if `skip_graphql_metrics_analysis` is set to true in the context' do
     query = GraphQL::Query.new(
-      Schema,
+      SchemaWithFullMetrics,
       kitchen_sink_query_document,
       variables: { 'postId': '1', 'titleUpcase': true },
       operation_name: 'PostDetails',
@@ -446,7 +446,7 @@ class GraphQLMetricsIntegrationTest < ActiveSupport::TestCase
 
   test 'extracts metrics manually via analyze call, with args supplied inline' do
     query = GraphQL::Query.new(
-      Schema,
+      SchemaWithFullMetrics,
       mutation_document_inline_args,
       operation_name: 'PostCreate',
     )
@@ -468,7 +468,7 @@ class GraphQLMetricsIntegrationTest < ActiveSupport::TestCase
 
   test 'extracts metrics manually via analyze call with args supplied by variables' do
     query = GraphQL::Query.new(
-      Schema,
+      SchemaWithFullMetrics,
       mutation_document,
       variables: {
         'postInput': {
@@ -556,7 +556,7 @@ class GraphQLMetricsIntegrationTest < ActiveSupport::TestCase
 
   test 'extracts metrics from mutations, input objects' do
     query = GraphQL::Query.new(
-      Schema,
+      SchemaWithFullMetrics,
       mutation_document,
       variables: {
         'postInput': {
@@ -695,7 +695,7 @@ class GraphQLMetricsIntegrationTest < ActiveSupport::TestCase
     )
   end
 
-  class Schema2 < GraphQL::Schema
+  class SchemaWithoutTimingMetrics < GraphQL::Schema
     query QueryRoot
     mutation MutationRoot
 
@@ -708,7 +708,7 @@ class GraphQLMetricsIntegrationTest < ActiveSupport::TestCase
 
   test 'works as simple analyzer, gathering static metrics with no runtime data when the analyzer is not used as instrumentation and or a tracer' do
     query = GraphQL::Query.new(
-      Schema2,
+      SchemaWithoutTimingMetrics,
       kitchen_sink_query_document,
       variables: { 'postId': '1', 'titleUpcase': true },
       operation_name: 'PostDetails',
@@ -943,7 +943,6 @@ class GraphQLMetricsIntegrationTest < ActiveSupport::TestCase
     GRAPHQL
   end
 
-  # TODO: Need nested inputs to test argument value extraction here, as well as in Shopify/shopify
   def mutation_document
     <<~GRAPHQL
       mutation PostCreate($postInput: PostInput!) {

@@ -22,33 +22,32 @@ module GraphQLMetrics
       skip_tracing = possible_context&.fetch(GraphQLMetrics::SKIP_GRAPHQL_METRICS_ANALYSIS, false)
       return yield if skip_tracing
 
-      return setup_tracing_before_lexing { yield } if key == GRAPHQL_GEM_LEXING_KEY
-      return capture_parsing_time { yield } if key == GRAPHQL_GEM_PARSING_KEY
+      case key
+      when GRAPHQL_GEM_LEXING_KEY
+        return setup_tracing_before_lexing { yield }
+      when GRAPHQL_GEM_PARSING_KEY
+        return capture_parsing_time { yield }
+      when *GRAPHQL_GEM_VALIDATION_KEYS
+        context = possible_context || data[:multiplex].queries.first.context
 
-      context = possible_context || data[:multiplex].queries.first.context
-
-      if GRAPHQL_GEM_VALIDATION_KEYS.include?(key)
         return yield unless context.query.valid?
         return capture_validation_time(context) { yield }
-      end
+      when *GRAPHQL_GEM_TRACING_FIELD_KEYS
+        return yield unless GraphQLMetrics.timings_capture_enabled?(data[:query].context)
 
-      field_being_traced = GRAPHQL_GEM_TRACING_FIELD_KEYS.include?(key)
+        self.pre_context = nil
 
-      if !field_being_traced || field_being_traced && !GraphQLMetrics.timings_capture_enabled?(context)
+        context_key = case key
+        when GRAPHQL_GEM_TRACING_FIELD_KEY
+          GraphQLMetrics::INLINE_FIELD_TIMINGS
+        when GRAPHQL_GEM_TRACING_LAZY_FIELD_KEY
+          GraphQLMetrics::LAZY_FIELD_TIMINGS
+        end
+
+        trace_field(context_key, data) { yield }
+      else
         return yield
       end
-
-      # NOTE: cattr values no longer needed, everything we need is in context by now.
-      self.pre_context = nil
-
-      context_key = case key
-      when GRAPHQL_GEM_TRACING_FIELD_KEY
-        GraphQLMetrics::INLINE_FIELD_TIMINGS
-      when GRAPHQL_GEM_TRACING_LAZY_FIELD_KEY
-        GraphQLMetrics::LAZY_FIELD_TIMINGS
-      end
-
-      trace_field(context_key, data) { yield }
     end
 
     private
