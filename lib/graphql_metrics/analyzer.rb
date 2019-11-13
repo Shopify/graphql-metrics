@@ -28,9 +28,8 @@ module GraphQLMetrics
     def initialize(query_or_multiplex)
       super
 
-      query_or_multiplex.context.namespace(CONTEXT_NAMESPACE).tap do |ns|
-        ns[ANALYZER_INSTANCE_KEY] = self
-      end
+      ns = query_or_multiplex.context.namespace(CONTEXT_NAMESPACE)
+      ns[ANALYZER_INSTANCE_KEY] = self
 
       @query = query_or_multiplex
       @static_query_metrics = nil
@@ -38,10 +37,10 @@ module GraphQLMetrics
     end
 
     def analyze?
-      query.valid? && query.context[GraphQLMetrics::SKIP_GRAPHQL_METRICS_ANALYSIS] != true
+      query.valid? && !query.context[GraphQLMetrics::SKIP_GRAPHQL_METRICS_ANALYSIS]
     end
 
-    def extract_query(runtime_query_metrics: {}, context:)
+    def extract_query(runtime_query_metrics: {})
       query_extracted(@static_query_metrics.merge(runtime_query_metrics))
     end
 
@@ -65,61 +64,60 @@ module GraphQLMetrics
         path: visitor.response_path,
       }
 
-      if GraphQLMetrics.timings_capture_enabled?(visitor.query.context)
+      if GraphQLMetrics.timings_capture_enabled?(@query.context)
         @static_field_metrics << static_metrics
       else
         field_extracted(static_metrics)
       end
     end
 
-    def extract_fields_with_runtime_metrics(context)
+    def extract_fields_with_runtime_metrics
+      ns = @context.namespace(CONTEXT_NAMESPACE)
+
       @static_field_metrics.each do |static_metrics|
-        context.namespace(CONTEXT_NAMESPACE).tap do |ns|
-          resolver_timings = ns[GraphQLMetrics::INLINE_FIELD_TIMINGS][static_metrics[:path]]
-          lazy_field_timing = ns[GraphQLMetrics::LAZY_FIELD_TIMINGS][static_metrics[:path]]
+        resolver_timings = ns[GraphQLMetrics::INLINE_FIELD_TIMINGS][static_metrics[:path]]
+        lazy_field_timing = ns[GraphQLMetrics::LAZY_FIELD_TIMINGS][static_metrics[:path]]
 
-          metrics = static_metrics.merge(
-            resolver_timings: resolver_timings,
-            lazy_resolver_timings: lazy_field_timing,
-          )
+        metrics = static_metrics.merge(
+          resolver_timings: resolver_timings,
+          lazy_resolver_timings: lazy_field_timing,
+        )
 
-          field_extracted(metrics)
-        end
+        field_extracted(metrics)
       end
     end
 
     def result
-      unless GraphQLMetrics.timings_capture_enabled?(@query.context)
-        # NOTE: If we're running as a static analyzer (i.e. not with instrumentation and tracing), we still need to
-        # flush static query metrics somewhere other than `after_query`.
-        @query.context.namespace(CONTEXT_NAMESPACE).tap do |ns|
-          analyzer = ns[GraphQLMetrics::ANALYZER_INSTANCE_KEY]
-          analyzer.extract_query(context: @query.context)
-        end
-      end
+      return if GraphQLMetrics.timings_capture_enabled?(@query.context)
+
+      # NOTE: If we're running as a static analyzer (i.e. not with instrumentation and tracing), we still need to
+      # flush static query metrics somewhere other than `after_query`.
+      ns = @query.context.namespace(CONTEXT_NAMESPACE)
+      analyzer = ns[GraphQLMetrics::ANALYZER_INSTANCE_KEY]
+      analyzer.extract_query
     end
 
     private
 
-    def extract_arguments(value, field_defn)
-      case value
+    def extract_arguments(argument, field_defn)
+      case argument
       when Array
-        value.each do |v|
-          extract_arguments(v, field_defn)
+        argument.each do |a|
+          extract_arguments(a, field_defn)
         end
       when Hash
-        value.each_value do |v|
-          extract_arguments(v, field_defn)
+        argument.each_value do |a|
+          extract_arguments(a, field_defn)
         end
       when ::GraphQL::Query::Arguments
-        value.each_value do |arg_val|
+        argument.each_value do |arg_val|
           extract_arguments(arg_val, field_defn)
         end
       when ::GraphQL::Query::Arguments::ArgumentValue
-        extract_argument(value, field_defn)
-        extract_arguments(value.value, field_defn)
+        extract_argument(argument, field_defn)
+        extract_arguments(argument.value, field_defn)
       when ::GraphQL::Schema::InputObject
-        extract_arguments(value.arguments.argument_values.values, field_defn)
+        extract_arguments(argument.arguments.argument_values.values, field_defn)
       end
     end
 

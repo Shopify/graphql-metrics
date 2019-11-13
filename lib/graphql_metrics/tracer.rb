@@ -15,27 +15,27 @@ module GraphQLMetrics
       GRAPHQL_GEM_TRACING_LAZY_FIELD_KEY = 'execute_field_lazy'
     ]
 
-    def self.trace(key, data, &resolver_block)
+    def self.trace(key, data)
       # NOTE: Context doesn't exist yet during lexing, parsing.
       possible_context = data[:query]&.context
 
       skip_tracing = possible_context&.fetch(GraphQLMetrics::SKIP_GRAPHQL_METRICS_ANALYSIS, false)
-      return resolver_block.call if skip_tracing
+      return yield if skip_tracing
 
-      return setup_tracing_before_lexing(resolver_block) if key == GRAPHQL_GEM_LEXING_KEY
-      return capture_parsing_time(resolver_block) if key == GRAPHQL_GEM_PARSING_KEY
+      return setup_tracing_before_lexing { yield } if key == GRAPHQL_GEM_LEXING_KEY
+      return capture_parsing_time { yield } if key == GRAPHQL_GEM_PARSING_KEY
 
       context = possible_context || data[:multiplex].queries.first.context
 
       if GRAPHQL_GEM_VALIDATION_KEYS.include?(key)
-        return resolver_block.call unless context.query.valid?
-        return capture_validation_time(context, resolver_block)
+        return yield unless context.query.valid?
+        return capture_validation_time(context) { yield }
       end
 
       field_being_traced = GRAPHQL_GEM_TRACING_FIELD_KEYS.include?(key)
 
       if !field_being_traced || field_being_traced && !GraphQLMetrics.timings_capture_enabled?(context)
-        return resolver_block.call
+        return yield
       end
 
       # NOTE: cattr values no longer needed, everything we need is in context by now.
@@ -48,42 +48,40 @@ module GraphQLMetrics
         GraphQLMetrics::LAZY_FIELD_TIMINGS
       end
 
-      trace_field(context_key, data, resolver_block)
+      trace_field(context_key, data) { yield }
     end
 
     private
 
-    def self.trace_field(context_key, data, resolver_block)
+    def self.trace_field(context_key, data)
       path_excluding_numeric_indicies = data[:path].select { |p| p.is_a?(String) }
 
-      query_start_time_monotonic = data[:query].context
-        .namespace(GraphQLMetrics::CONTEXT_NAMESPACE)[GraphQLMetrics::QUERY_START_TIME_MONOTONIC]
+      ns = data[:query].context.namespace(CONTEXT_NAMESPACE)
+      query_start_time_monotonic = ns[GraphQLMetrics::QUERY_START_TIME_MONOTONIC]
 
       field_start_time_monotonic = GraphQLMetrics.current_time_monotonic
       field_start_time_offset = field_start_time_monotonic - query_start_time_monotonic
 
-      result = resolver_block.call
+      result = yield
       duration = GraphQLMetrics.current_time_monotonic - field_start_time_monotonic
 
-      data[:query].context.namespace(CONTEXT_NAMESPACE).tap do |ns|
-        ns[context_key][path_excluding_numeric_indicies] ||= []
-        ns[context_key][path_excluding_numeric_indicies] << {
-          start_time_offset: field_start_time_offset, duration: duration
-        }
-      end
+      ns[context_key][path_excluding_numeric_indicies] ||= []
+      ns[context_key][path_excluding_numeric_indicies] << {
+        start_time_offset: field_start_time_offset, duration: duration
+      }
 
       result
     end
 
-    def self.setup_tracing_before_lexing(resolver_block)
+    def self.setup_tracing_before_lexing
       self.pre_context = Concurrent::ThreadLocalVar.new(OpenStruct.new)
       self.pre_context.value.query_start_time = GraphQLMetrics.current_time
       self.pre_context.value.query_start_time_monotonic = GraphQLMetrics.current_time_monotonic
 
-      resolver_block.call
+      yield
     end
 
-    def self.capture_parsing_time(resolver_block)
+    def self.capture_parsing_time
       # NOTE: Storing pre-validation timings on class attributes, since there's no query context available during
       # parsing phase.
 
@@ -92,35 +90,34 @@ module GraphQLMetrics
       self.pre_context.value.parsing_start_time_offset =
         parsing_start_time_monotonic - self.pre_context.value.query_start_time_monotonic
 
-      result = resolver_block.call
+      result = yield
       self.pre_context.value.parsing_duration = GraphQLMetrics.current_time_monotonic - parsing_start_time_monotonic
 
       result
     end
 
-    def self.capture_validation_time(context, resolver_block)
+    def self.capture_validation_time(context)
       validation_start_time_monotonic = GraphQLMetrics.current_time_monotonic
 
       validation_start_time_offset =
         validation_start_time_monotonic - self.pre_context.value.query_start_time_monotonic
 
-      result = resolver_block.call
+      result = yield
 
       validation_duration = GraphQLMetrics.current_time_monotonic - validation_start_time_monotonic
 
-      context.namespace(CONTEXT_NAMESPACE).tap do |ns|
-        previous_validation_duration = ns[GraphQLMetrics::VALIDATION_DURATION] || 0
+      ns = context.namespace(CONTEXT_NAMESPACE)
+      previous_validation_duration = ns[GraphQLMetrics::VALIDATION_DURATION] || 0
 
-        ns[GraphQLMetrics::QUERY_START_TIME] = self.pre_context.value.query_start_time
-        ns[GraphQLMetrics::QUERY_START_TIME_MONOTONIC] = self.pre_context.value.query_start_time_monotonic
-        ns[PARSING_START_TIME_OFFSET] = self.pre_context.value.parsing_start_time_offset
-        ns[PARSING_DURATION] = self.pre_context.value.parsing_duration
-        ns[VALIDATION_START_TIME_OFFSET] = validation_start_time_offset
+      ns[GraphQLMetrics::QUERY_START_TIME] = self.pre_context.value.query_start_time
+      ns[GraphQLMetrics::QUERY_START_TIME_MONOTONIC] = self.pre_context.value.query_start_time_monotonic
+      ns[PARSING_START_TIME_OFFSET] = self.pre_context.value.parsing_start_time_offset
+      ns[PARSING_DURATION] = self.pre_context.value.parsing_duration
+      ns[VALIDATION_START_TIME_OFFSET] = validation_start_time_offset
 
-        # NOTE: We add up times spent validating the query syntax as well as running all analyzers.
-        # This applies to all tracer steps with keys including GRAPHQL_GEM_VALIDATION_KEYS.
-        ns[GraphQLMetrics::VALIDATION_DURATION] = validation_duration + previous_validation_duration
-      end
+      # NOTE: We add up times spent validating the query syntax as well as running all analyzers.
+      # This applies to all tracer steps with keys including GRAPHQL_GEM_VALIDATION_KEYS.
+      ns[GraphQLMetrics::VALIDATION_DURATION] = validation_duration + previous_validation_duration
 
       result
     end
