@@ -22,6 +22,8 @@ module GraphQLMetrics
       skip_tracing = possible_context&.fetch(GraphQLMetrics::SKIP_GRAPHQL_METRICS_ANALYSIS, false)
       return yield if skip_tracing
 
+      # NOTE: Not all tracing events are handled here, but those that are are handled in this case statement in
+      # chronological order.
       case key
       when GRAPHQL_GEM_LEXING_KEY
         return setup_tracing_before_lexing { yield }
@@ -51,26 +53,6 @@ module GraphQLMetrics
     end
 
     private
-
-    def self.trace_field(context_key, data)
-      path_excluding_numeric_indicies = data[:path].select { |p| p.is_a?(String) }
-
-      ns = data[:query].context.namespace(CONTEXT_NAMESPACE)
-      query_start_time_monotonic = ns[GraphQLMetrics::QUERY_START_TIME_MONOTONIC]
-
-      field_start_time_monotonic = GraphQLMetrics.current_time_monotonic
-      field_start_time_offset = field_start_time_monotonic - query_start_time_monotonic
-
-      result = yield
-      duration = GraphQLMetrics.current_time_monotonic - field_start_time_monotonic
-
-      ns[context_key][path_excluding_numeric_indicies] ||= []
-      ns[context_key][path_excluding_numeric_indicies] << {
-        start_time_offset: field_start_time_offset, duration: duration
-      }
-
-      result
-    end
 
     def self.setup_tracing_before_lexing
       self.pre_context = Concurrent::ThreadLocalVar.new(OpenStruct.new)
@@ -117,6 +99,26 @@ module GraphQLMetrics
       # NOTE: We add up times spent validating the query syntax as well as running all analyzers.
       # This applies to all tracer steps with keys including GRAPHQL_GEM_VALIDATION_KEYS.
       ns[GraphQLMetrics::VALIDATION_DURATION] = validation_duration + previous_validation_duration
+
+      result
+    end
+
+    def self.trace_field(context_key, data)
+      path_excluding_numeric_indicies = data[:path].select { |p| p.is_a?(String) }
+
+      ns = data[:query].context.namespace(CONTEXT_NAMESPACE)
+      query_start_time_monotonic = ns[GraphQLMetrics::QUERY_START_TIME_MONOTONIC]
+
+      field_start_time_monotonic = GraphQLMetrics.current_time_monotonic
+      field_start_time_offset = field_start_time_monotonic - query_start_time_monotonic
+
+      result = yield
+      duration = GraphQLMetrics.current_time_monotonic - field_start_time_monotonic
+
+      ns[context_key][path_excluding_numeric_indicies] ||= []
+      ns[context_key][path_excluding_numeric_indicies] << {
+        start_time_offset: field_start_time_offset, duration: duration
+      }
 
       result
     end
