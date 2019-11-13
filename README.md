@@ -1,6 +1,6 @@
 # GraphQL Metrics Extractor
 
-[![Build Status](https://travis-ci.org/Shopify/graphql-metrics.svg?branch=master)](https://travis-ci.org/Shopify/graphql-metrics)
+![](https://github.com/Shopify/graphql-metrics/workflows/Ruby/badge.svg)
 
 Extract as much much detail as you want from GraphQL queries, served up from your Ruby app and the [`graphql` gem](https://github.com/rmosolgo/graphql-ruby).
 Compatible with the [`graphql-batch` gem](https://github.com/Shopify/graphql-batch), to extract batch-loaded fields resolution timings.
