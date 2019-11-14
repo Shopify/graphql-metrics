@@ -4,6 +4,7 @@ module GraphQLMetrics
   module Instrumentation
     module_function
 
+    # TODO: can this be an instance?
     def before_query(query)
       return if query.context[GraphQLMetrics::SKIP_GRAPHQL_METRICS_ANALYSIS]
 

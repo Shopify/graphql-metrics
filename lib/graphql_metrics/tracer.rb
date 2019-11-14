@@ -15,6 +15,7 @@ module GraphQLMetrics
       GRAPHQL_GEM_TRACING_LAZY_FIELD_KEY = 'execute_field_lazy'
     ]
 
+    # TODO: can we implement this as an instance method? pass options instead of skip in context?
     def self.trace(key, data)
       # NOTE: Context doesn't exist yet during lexing, parsing.
       possible_context = data[:query]&.context

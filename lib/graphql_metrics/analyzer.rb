@@ -72,7 +72,7 @@ module GraphQLMetrics
     end
 
     def extract_fields_with_runtime_metrics
-      ns = @context.namespace(CONTEXT_NAMESPACE)
+      ns = @query.context.namespace(CONTEXT_NAMESPACE)
 
       @static_field_metrics.each do |static_metrics|
         resolver_timings = ns[GraphQLMetrics::INLINE_FIELD_TIMINGS][static_metrics[:path]]
