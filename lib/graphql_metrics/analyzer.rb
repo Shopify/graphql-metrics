@@ -2,7 +2,8 @@
 
 # Execution order:
 # When used as instrumentation, an analyzer and tracing, the order of execution is:
-
+#
+# * Tracer.setup_tracing_before_lexing
 # * Tracer.capture_parsing_time
 # * Instrumentation.before_query (context setup)
 # * Tracer.capture_validation_time (twice, once for `analyze_query`, then `analyze_multiplex`)
@@ -25,13 +26,15 @@
 
 module GraphQLMetrics
   class Analyzer < GraphQL::Analysis::AST::Analyzer
+    attr_reader :query
+
     def initialize(query_or_multiplex)
       super
 
-      ns = query_or_multiplex.context.namespace(CONTEXT_NAMESPACE)
+      @query = query_or_multiplex
+      ns = query.context.namespace(CONTEXT_NAMESPACE)
       ns[ANALYZER_INSTANCE_KEY] = self
 
-      @query = query_or_multiplex
       @static_query_metrics = nil
       @static_field_metrics = []
     end
@@ -41,7 +44,7 @@ module GraphQLMetrics
     end
 
     def extract_query(runtime_query_metrics: {})
-      query_extracted(@static_query_metrics.merge(runtime_query_metrics))
+      query_extracted(@static_query_metrics.merge(runtime_query_metrics)) if @static_query_metrics
     end
 
     def on_enter_operation_definition(_node, _parent, visitor)
@@ -64,7 +67,7 @@ module GraphQLMetrics
         path: visitor.response_path,
       }
 
-      if GraphQLMetrics.timings_capture_enabled?(@query.context)
+      if GraphQLMetrics.timings_capture_enabled?(query.context)
         @static_field_metrics << static_metrics
       else
         field_extracted(static_metrics)
@@ -72,7 +75,7 @@ module GraphQLMetrics
     end
 
     def extract_fields_with_runtime_metrics
-      ns = @query.context.namespace(CONTEXT_NAMESPACE)
+      ns = query.context.namespace(CONTEXT_NAMESPACE)
 
       @static_field_metrics.each do |static_metrics|
         resolver_timings = ns[GraphQLMetrics::INLINE_FIELD_TIMINGS][static_metrics[:path]]
@@ -88,11 +91,12 @@ module GraphQLMetrics
     end
 
     def result
-      return if GraphQLMetrics.timings_capture_enabled?(@query.context)
+      return if GraphQLMetrics.timings_capture_enabled?(query.context)
+      return if query.context[GraphQLMetrics::SKIP_GRAPHQL_METRICS_ANALYSIS]
 
       # NOTE: If we're running as a static analyzer (i.e. not with instrumentation and tracing), we still need to
       # flush static query metrics somewhere other than `after_query`.
-      ns = @query.context.namespace(CONTEXT_NAMESPACE)
+      ns = query.context.namespace(CONTEXT_NAMESPACE)
       analyzer = ns[GraphQLMetrics::ANALYZER_INSTANCE_KEY]
       analyzer.extract_query
     end

@@ -36,13 +36,15 @@ class GraphQLMetricsIntegrationTest < ActiveSupport::TestCase
   end
 
   class SimpleAnalyzer < GraphQLMetrics::Analyzer
+    ANALYZER_NAMESPACE = :simple_analyzer_namespace
+
     attr_reader :types_used, :context
 
     def initialize(query_or_multiplex)
       super
 
-      @context = query_or_multiplex.context
-      @context[:simple_extractor_results] = {}
+      @context = query_or_multiplex.context.namespace(ANALYZER_NAMESPACE)
+      @context[:simple_extractor_results]
     end
 
     def query_extracted(metrics)
@@ -95,7 +97,7 @@ class GraphQLMetricsIntegrationTest < ActiveSupport::TestCase
     refute result['errors'].present?
     assert result['data'].present?
 
-    results = query.context[:simple_extractor_results]
+    results = query.context.namespace(SimpleAnalyzer::ANALYZER_NAMESPACE)[:simple_extractor_results]
 
     actual_queries = results[:queries]
     actual_fields = results[:fields]
@@ -426,6 +428,16 @@ class GraphQLMetricsIntegrationTest < ActiveSupport::TestCase
     assert_nil analysis_results
   end
 
+  test 'skips analysis, if the query is valid but blank' do
+    query = GraphQL::Query.new(
+      SchemaWithFullMetrics,
+      '# Welcome to GraphiQL !',
+    )
+
+    analysis_results = GraphQL::Analysis::AST.analyze_query(query, [SimpleAnalyzer]).first
+    assert_nil analysis_results
+  end
+
   test 'skips analysis, instrumentation and tracing if `skip_graphql_metrics_analysis` is set to true in the context' do
     query = GraphQL::Query.new(
       SchemaWithFullMetrics,
@@ -439,7 +451,7 @@ class GraphQLMetricsIntegrationTest < ActiveSupport::TestCase
     refute result['errors'].present?
     assert result['data'].present?
 
-    results = query.context[:simple_extractor_results]
+    results = query.context.namespace(SimpleAnalyzer::ANALYZER_NAMESPACE)[:simple_extractor_results]
 
     assert_equal({}, results)
   end
@@ -456,7 +468,7 @@ class GraphQLMetricsIntegrationTest < ActiveSupport::TestCase
     refute result['errors'].present?
     assert result['data'].present?
 
-    results = query.context[:simple_extractor_results]
+    results = query.context.namespace(SimpleAnalyzer::ANALYZER_NAMESPACE)[:simple_extractor_results]
     actual_arguments = results[:arguments]
 
     assert_equal(
@@ -490,7 +502,7 @@ class GraphQLMetricsIntegrationTest < ActiveSupport::TestCase
     refute result['errors'].present?
     assert result['data'].present?
 
-    results = query.context[:simple_extractor_results]
+    results = query.context.namespace(SimpleAnalyzer::ANALYZER_NAMESPACE)[:simple_extractor_results]
     actual_arguments = results[:arguments]
 
     assert_equal(
@@ -575,7 +587,7 @@ class GraphQLMetricsIntegrationTest < ActiveSupport::TestCase
     refute result['errors'].present?
     assert result['data'].present?
 
-    results = query.context[:simple_extractor_results]
+    results = query.context.namespace(SimpleAnalyzer::ANALYZER_NAMESPACE)[:simple_extractor_results]
 
     actual_queries = results[:queries]
     actual_fields = results[:fields]
@@ -718,7 +730,7 @@ class GraphQLMetricsIntegrationTest < ActiveSupport::TestCase
     refute result['errors'].present?
     assert result['data'].present?
 
-    results = query.context[:simple_extractor_results]
+    results = query.context.namespace(SimpleAnalyzer::ANALYZER_NAMESPACE)[:simple_extractor_results]
 
     actual_queries = results[:queries]
     actual_fields = results[:fields]

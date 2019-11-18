@@ -6,6 +6,14 @@ module GraphQLMetrics
 
     # TODO: can this be an instance?
     def before_query(query)
+      query_present_and_valid = query.valid? && query.document.to_query_string.present?
+
+      unless query_present_and_valid
+        query.context[GraphQLMetrics::SKIP_GRAPHQL_METRICS_ANALYSIS] = true
+      end
+
+      # NOTE: This context value may have been set to true in the application, so we should still return early here if
+      # it's set, even if the query is valid.
       return if query.context[GraphQLMetrics::SKIP_GRAPHQL_METRICS_ANALYSIS]
 
       ns = query.context.namespace(CONTEXT_NAMESPACE)
