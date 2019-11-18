@@ -44,7 +44,7 @@ class GraphQLMetricsIntegrationTest < ActiveSupport::TestCase
       super
 
       @context = query_or_multiplex.context.namespace(ANALYZER_NAMESPACE)
-      @context[:simple_extractor_results]
+      @context[:simple_extractor_results] = {}
     end
 
     def query_extracted(metrics)

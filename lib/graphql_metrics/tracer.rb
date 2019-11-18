@@ -31,6 +31,7 @@ module GraphQLMetrics
       when GRAPHQL_GEM_PARSING_KEY
         return capture_parsing_time { yield }
       when *GRAPHQL_GEM_VALIDATION_KEYS
+        # TODO: Don't just handle first query in multiplex
         context = possible_context || data[:multiplex].queries.first.context
 
         return yield unless context.query.valid?
