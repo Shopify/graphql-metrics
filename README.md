@@ -35,7 +35,7 @@ Or install it yourself as:
 
 Get started by defining your own Analyzer, inheriting from `GraphQLMetrics::Analyzer`.
 
-This following analyzer demonstrates a simple way to capture commonly used metrics sourced from key parts of your schema
+The following analyzer demonstrates a simple way to capture commonly used metrics sourced from key parts of your schema
 definition, the query document being served, as well as runtime query and resolver timings. In this toy example, all of
 this data is simply stored on the GraphQL::Query context, under a namespace to avoid collisions with other analyzers
 etc.
@@ -59,7 +59,7 @@ What you do with these captured metrics is up to you!
     # @param metrics [Hash] Query metrics, including a few details about the query document itself, as well as runtime
     # timings metrics, intended to be compatible with the Apollo Tracing spec:
     # https://github.com/apollographql/apollo-tracing#response-format
-
+    #
     # {
     #   operation_type: "query",
     #   operation_name: "PostDetails",
@@ -70,7 +70,7 @@ What you do with these captured metrics is up to you!
     #   validation_start_time_offset: 0.0030819999519735575,
     #   validation_duration: 0.01704599999357015,
     # }
-
+    #
     # You can use these metrics to track high-level query performance, along with any other details you wish to
     # manually capture from `query` and/or `query.context`.
     def query_extracted(metrics)
@@ -81,14 +81,18 @@ What you do with these captured metrics is up to you!
 
       # You can make use of captured metrics here (logging to Kafka, request logging etc.)
       # log_metrics(:fields, metrics)
-
+      #
       # Or store them on the query context:
       store_metrics(:queries, metrics.merge(custom_metrics_from_context))
 
       # For use after calling query.result, in this case by digging them out, for example in a Rails controller:
-      # query_result = graphql_query.result.to_h
-      # do_something_with_metrics(query.context[:simple_extractor_results])
-      # render json: graphql_query.result
+      # class GraphQLController < ...
+      #   def graph_ql
+      #     query_result = graphql_query.result.to_h
+      #     do_something_with_metrics(query.context[:simple_extractor_results])
+      #     render json: graphql_query.result
+      #   end
+      # end
     end
 
     # @param metrics [Hash] Field selection metrics, including resolver timings metrics, also ahering to the
@@ -97,13 +101,13 @@ What you do with these captured metrics is up to you!
     # `resolver_timings` is populated any time a field is resolved (which may be many times, if the field is nested
     # within a list field e.g. a Relay connection field). There should always be at least one of these per field in
     # a query.
-
+    #
     # `lazy_resolver_timings` is only populated by fields that are resolved lazily (for example using the
-    # graphql-metrics gem) or that are otherwise resolve with a Promise. Any time spent in the field's resolver to
+    # graphql-batch gem) or that are otherwise resolved with a Promise. Any time spent in the field's resolver to
     # prepare work to be done "later" in a Promise, or batch loader will be captured in `resolver_timings`. The time
     # spent actually doing lazy field loading, including time spent within a batch loader can be obtained from
     # `lazy_resolver_timings`.
-
+    #
     # {
     #   field_name: "id",
     #   return_type_name: "ID",
@@ -131,7 +135,7 @@ What you do with these captured metrics is up to you!
     #   value_is_null: false,
     #   value: <GraphQL::Query::Arguments::ArgumentValue>,
     # }
-
+    #
     # `value` is exposed here, in case you want to get access to the argument's definition, including the type
     # class which defines it, e.g. `metrics[:value].definition.metadata[:type_class]`
     def argument_extracted(metrics)
