@@ -9,7 +9,7 @@ module GraphQLMetrics
     # NOTE: These constants come from the graphql ruby gem.
     GRAPHQL_GEM_LEXING_KEY = 'lex'
     GRAPHQL_GEM_PARSING_KEY = 'parse'
-    GRAPHQL_GEM_VALIDATION_KEYS = ['validate', 'analyze_query', 'analyze_multiplex']
+    GRAPHQL_GEM_VALIDATION_KEYS = ['validate', 'analyze_query']
     GRAPHQL_GEM_TRACING_FIELD_KEYS = [
       GRAPHQL_GEM_TRACING_FIELD_KEY = 'execute_field',
       GRAPHQL_GEM_TRACING_LAZY_FIELD_KEY = 'execute_field_lazy'
@@ -31,8 +31,7 @@ module GraphQLMetrics
       when GRAPHQL_GEM_PARSING_KEY
         return capture_parsing_time { yield }
       when *GRAPHQL_GEM_VALIDATION_KEYS
-        # TODO: Don't just handle first query in multiplex
-        context = possible_context || data[:multiplex].queries.first.context
+        context = possible_context
 
         return yield unless context.query.valid?
         return capture_validation_time(context) { yield }
