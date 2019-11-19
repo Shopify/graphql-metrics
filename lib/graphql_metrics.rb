@@ -39,4 +39,20 @@ module GraphQLMetrics
   def self.current_time_monotonic
     Process.clock_gettime(Process::CLOCK_MONOTONIC)
   end
+
+  def self.time(*args)
+    TimedResult.new(*args) { yield }
+  end
+
+  class TimedResult
+    attr_reader :result, :start_time, :duration, :time_since_offset
+
+    def initialize(offset_time = nil)
+      @offset_time = offset_time
+      @start_time = GraphQLMetrics.current_time_monotonic
+      @result = yield
+      @duration = GraphQLMetrics.current_time_monotonic - @start_time
+      @time_since_offset = @start_time - @offset_time if @offset_time
+    end
+  end
 end

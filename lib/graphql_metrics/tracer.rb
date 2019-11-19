@@ -64,29 +64,16 @@ module GraphQLMetrics
     end
 
     def self.capture_parsing_time
-      # NOTE: Storing pre-validation timings on class attributes, since there's no query context available during
-      # parsing phase.
+      timed_result = GraphQLMetrics.time { yield }
 
-      parsing_start_time_monotonic = GraphQLMetrics.current_time_monotonic
+      self.pre_context.value.parsing_start_time_offset = timed_result.start_time
+      self.pre_context.value.parsing_duration = timed_result.duration
 
-      self.pre_context.value.parsing_start_time_offset =
-        parsing_start_time_monotonic - self.pre_context.value.query_start_time_monotonic
-
-      result = yield
-      self.pre_context.value.parsing_duration = GraphQLMetrics.current_time_monotonic - parsing_start_time_monotonic
-
-      result
+      timed_result.result
     end
 
     def self.capture_validation_time(context)
-      validation_start_time_monotonic = GraphQLMetrics.current_time_monotonic
-
-      validation_start_time_offset =
-        validation_start_time_monotonic - self.pre_context.value.query_start_time_monotonic
-
-      result = yield
-
-      validation_duration = GraphQLMetrics.current_time_monotonic - validation_start_time_monotonic
+      timed_result = GraphQLMetrics.time(self.pre_context.value.query_start_time_monotonic) { yield }
 
       ns = context.namespace(CONTEXT_NAMESPACE)
       previous_validation_duration = ns[GraphQLMetrics::VALIDATION_DURATION] || 0
@@ -95,33 +82,25 @@ module GraphQLMetrics
       ns[GraphQLMetrics::QUERY_START_TIME_MONOTONIC] = self.pre_context.value.query_start_time_monotonic
       ns[PARSING_START_TIME_OFFSET] = self.pre_context.value.parsing_start_time_offset
       ns[PARSING_DURATION] = self.pre_context.value.parsing_duration
-      ns[VALIDATION_START_TIME_OFFSET] = validation_start_time_offset
+      ns[VALIDATION_START_TIME_OFFSET] = timed_result.time_since_offset
+      ns[GraphQLMetrics::VALIDATION_DURATION] = timed_result.duration + previous_validation_duration
 
-      # NOTE: We add up times spent validating the query syntax as well as running all analyzers.
-      # This applies to all tracer steps with keys including GRAPHQL_GEM_VALIDATION_KEYS.
-      ns[GraphQLMetrics::VALIDATION_DURATION] = validation_duration + previous_validation_duration
-
-      result
+      timed_result.result
     end
 
     def self.trace_field(context_key, data)
-      path_excluding_numeric_indicies = data[:path].select { |p| p.is_a?(String) }
-
       ns = data[:query].context.namespace(CONTEXT_NAMESPACE)
       query_start_time_monotonic = ns[GraphQLMetrics::QUERY_START_TIME_MONOTONIC]
 
-      field_start_time_monotonic = GraphQLMetrics.current_time_monotonic
-      field_start_time_offset = field_start_time_monotonic - query_start_time_monotonic
+      timed_result = GraphQLMetrics.time(query_start_time_monotonic) { yield }
 
-      result = yield
-      duration = GraphQLMetrics.current_time_monotonic - field_start_time_monotonic
-
+      path_excluding_numeric_indicies = data[:path].select { |p| p.is_a?(String) }
       ns[context_key][path_excluding_numeric_indicies] ||= []
       ns[context_key][path_excluding_numeric_indicies] << {
-        start_time_offset: field_start_time_offset, duration: duration
+        start_time_offset: timed_result.time_since_offset, duration: timed_result.duration
       }
 
-      result
+      timed_result.result
     end
   end
 end
