@@ -15,8 +15,8 @@ module GraphQLMetrics
       GRAPHQL_GEM_TRACING_LAZY_FIELD_KEY = 'execute_field_lazy'
     ]
 
-    # TODO: can we implement this as an instance method? pass options instead of skip in context?
-    def self.trace(key, data)
+    # TODO: pass options instead of skip in context?
+    def trace(key, data)
       # NOTE: Context doesn't exist yet during lexing, parsing.
       possible_context = data[:query]&.context
 
@@ -55,7 +55,7 @@ module GraphQLMetrics
 
     private
 
-    def self.setup_tracing_before_lexing
+    def setup_tracing_before_lexing
       self.pre_context = Concurrent::ThreadLocalVar.new(OpenStruct.new)
       self.pre_context.value.query_start_time = GraphQLMetrics.current_time
       self.pre_context.value.query_start_time_monotonic = GraphQLMetrics.current_time_monotonic
@@ -63,7 +63,7 @@ module GraphQLMetrics
       yield
     end
 
-    def self.capture_parsing_time
+    def capture_parsing_time
       timed_result = GraphQLMetrics.time { yield }
 
       self.pre_context.value.parsing_start_time_offset = timed_result.start_time
@@ -72,7 +72,7 @@ module GraphQLMetrics
       timed_result.result
     end
 
-    def self.capture_validation_time(context)
+    def capture_validation_time(context)
       timed_result = GraphQLMetrics.time(self.pre_context.value.query_start_time_monotonic) { yield }
 
       ns = context.namespace(CONTEXT_NAMESPACE)
@@ -88,7 +88,7 @@ module GraphQLMetrics
       timed_result.result
     end
 
-    def self.trace_field(context_key, data)
+    def trace_field(context_key, data)
       ns = data[:query].context.namespace(CONTEXT_NAMESPACE)
       query_start_time_monotonic = ns[GraphQLMetrics::QUERY_START_TIME_MONOTONIC]
 

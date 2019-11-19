@@ -31,8 +31,6 @@ module GraphQLMetrics
     def initialize(query_or_multiplex)
       super
 
-      # TODO: Handle multiplex of multiple queries
-      # https://graphql-ruby.org/queries/multiplex.html
       @query = query_or_multiplex
       ns = query.context.namespace(CONTEXT_NAMESPACE)
       ns[ANALYZER_INSTANCE_KEY] = self

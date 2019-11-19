@@ -1,10 +1,7 @@
 # frozen_string_literal: true
 
 module GraphQLMetrics
-  module Instrumentation
-    module_function
-
-    # TODO: can this be an instance?
+  class Instrumentation
     def before_query(query)
       query_present_and_valid = query.valid? && query.document.to_query_string.present?
 

@@ -75,9 +75,12 @@ class GraphQLMetricsIntegrationTest < ActiveSupport::TestCase
     use GraphQL::Execution::Interpreter
     use GraphQL::Analysis::AST
 
-    instrument :query, GraphQLMetrics::Instrumentation
+    instrument :query, GraphQLMetrics::Instrumentation.new
     query_analyzer SimpleAnalyzer
-    tracer GraphQLMetrics::Tracer
+    tracer GraphQLMetrics::Tracer.new
+
+    # TODO: Make this one call instead. Blocked, since this is broken upstream.
+    # use GraphQLMetrics
 
     def self.parse_error(err, _context)
       return if err.is_a?(GraphQL::ParseError)
