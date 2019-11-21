@@ -35,6 +35,7 @@ module GraphQLMetrics
         return yield unless context.query.valid?
         return capture_validation_time(context) { yield }
       when *GRAPHQL_GEM_TRACING_FIELD_KEYS
+        return yield if data[:query].context[SKIP_FIELD_AND_ARGUMENT_METRICS]
         return yield unless GraphQLMetrics.timings_capture_enabled?(data[:query].context)
 
         pre_context = nil

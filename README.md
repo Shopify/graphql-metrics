@@ -174,9 +174,9 @@ class Schema < GraphQL::Schema
 
   # TODO: This is broken upstream. For now it's:
   # use GraphQLMetrics, analyzer: SimpleAnalyzer, options: {}
-  instrument :query, GraphQLMetrics::Instrumentation
+  instrument :query, GraphQLMetrics::Instrumentation.new
   query_analyzer SimpleAnalyzer
-  tracer GraphQLMetrics::Tracer
+  tracer GraphQLMetrics::Tracer.new
 
   use GraphQL::Batch # Optional, but highly recommended. See https://github.com/Shopify/graphql-batch/.
 end

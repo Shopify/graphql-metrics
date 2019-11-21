@@ -13,6 +13,9 @@ module GraphQLMetrics
   # Skip metrics capture altogher, by setting `skip_graphql_metrics_analysis: true` in query context.
   SKIP_GRAPHQL_METRICS_ANALYSIS = :skip_graphql_metrics_analysis
 
+  # Skips just field and argument logging, when query metrics logging is still desirable
+  SKIP_FIELD_AND_ARGUMENT_METRICS = :skip_field_and_argument_metrics
+
   # Timings related constants.
   TIMINGS_CAPTURE_ENABLED = :timings_capture_enabled
   ANALYZER_INSTANCE_KEY = :analyzer_instance

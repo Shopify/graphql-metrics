@@ -55,6 +55,8 @@ module GraphQLMetrics
     end
 
     def on_leave_field(node, _parent, visitor)
+      return if query.context[SKIP_FIELD_AND_ARGUMENT_METRICS]
+
       # NOTE: @rmosolgo "I think it could be reduced to `arguments = visitor.arguments_for(ast_node)`"
       arguments = visitor.arguments_for(node, visitor.field_definition)
       extract_arguments(arguments.argument_values.values, visitor.field_definition)
@@ -75,6 +77,8 @@ module GraphQLMetrics
     end
 
     def extract_fields_with_runtime_metrics
+      return if query.context[SKIP_FIELD_AND_ARGUMENT_METRICS]
+
       ns = query.context.namespace(CONTEXT_NAMESPACE)
 
       @static_field_metrics.each do |static_metrics|

@@ -44,7 +44,11 @@ class GraphQLMetricsIntegrationTest < ActiveSupport::TestCase
       super
 
       @context = query_or_multiplex.context.namespace(ANALYZER_NAMESPACE)
-      @context[:simple_extractor_results] = {}
+      @context[:simple_extractor_results] = {
+        queries: [],
+        fields: [],
+        arguments: [],
+      }
     end
 
     def query_extracted(metrics)
@@ -62,7 +66,6 @@ class GraphQLMetricsIntegrationTest < ActiveSupport::TestCase
     private
 
     def store_metrics(context_key, metrics)
-      context[:simple_extractor_results][context_key] ||= []
       context[:simple_extractor_results][context_key] << metrics
     end
   end
@@ -215,6 +218,32 @@ class GraphQLMetricsIntegrationTest < ActiveSupport::TestCase
     assert_equal_with_diff_on_failure(kitchen_sink_expected_arguments, kitchen_sink_query_metrics[:arguments])
   end
 
+  test 'skips logging for fields and arguments if `skip_field_and_argument_metrics: true` in context' do
+    query = GraphQL::Query.new(
+      SchemaWithFullMetrics,
+      kitchen_sink_query_document,
+      variables: { 'postId': '1', 'titleUpcase': true },
+      operation_name: 'PostDetails',
+      context: {
+        GraphQLMetrics::SKIP_FIELD_AND_ARGUMENT_METRICS => true,
+      }
+    )
+    result = query.result.to_h
+
+    refute result['errors'].present?
+    assert result['data'].present?
+
+    results = query.context.namespace(SimpleAnalyzer::ANALYZER_NAMESPACE)[:simple_extractor_results]
+
+    actual_queries = results[:queries]
+    actual_fields = results[:fields]
+    actual_arguments = results[:arguments]
+
+    assert_equal_with_diff_on_failure(kitchen_sink_expected_queries, actual_queries)
+    assert_equal [], actual_fields
+    assert_equal [], actual_arguments
+  end
+
   test 'skips analysis, if the query is syntactically invalid' do
     query = GraphQL::Query.new(
       SchemaWithFullMetrics,
@@ -260,7 +289,8 @@ class GraphQLMetricsIntegrationTest < ActiveSupport::TestCase
 
     results = query.context.namespace(SimpleAnalyzer::ANALYZER_NAMESPACE)[:simple_extractor_results]
 
-    assert_equal({}, results)
+    expected = {:queries=>[], :fields=>[], :arguments=>[]}
+    assert_equal(expected, results)
   end
 
   test 'extracts metrics manually via analyze call, with args supplied inline' do
