@@ -4,7 +4,6 @@ module GraphQLMetrics
   class Tracer
     # NOTE: Used to store timings from lexing, parsing, validation, before we have a context to store
     # values in. Uses thread-safe Concurrent::ThreadLocalVar to store a set of values per thread.
-    cattr_accessor :pre_context
 
     # NOTE: These constants come from the graphql ruby gem.
     GRAPHQL_GEM_LEXING_KEY = 'lex'
@@ -38,7 +37,7 @@ module GraphQLMetrics
       when *GRAPHQL_GEM_TRACING_FIELD_KEYS
         return yield unless GraphQLMetrics.timings_capture_enabled?(data[:query].context)
 
-        self.pre_context = nil
+        pre_context = nil
 
         context_key = case key
         when GRAPHQL_GEM_TRACING_FIELD_KEY
@@ -55,10 +54,13 @@ module GraphQLMetrics
 
     private
 
+    def pre_context
+      @pre_context ||= Concurrent::ThreadLocalVar.new(OpenStruct.new)
+    end
+
     def setup_tracing_before_lexing
-      self.pre_context = Concurrent::ThreadLocalVar.new(OpenStruct.new)
-      self.pre_context.value.query_start_time = GraphQLMetrics.current_time
-      self.pre_context.value.query_start_time_monotonic = GraphQLMetrics.current_time_monotonic
+      pre_context.value.query_start_time = GraphQLMetrics.current_time
+      pre_context.value.query_start_time_monotonic = GraphQLMetrics.current_time_monotonic
 
       yield
     end
@@ -66,22 +68,22 @@ module GraphQLMetrics
     def capture_parsing_time
       timed_result = GraphQLMetrics.time { yield }
 
-      self.pre_context.value.parsing_start_time_offset = timed_result.start_time
-      self.pre_context.value.parsing_duration = timed_result.duration
+      pre_context.value.parsing_start_time_offset = timed_result.start_time
+      pre_context.value.parsing_duration = timed_result.duration
 
       timed_result.result
     end
 
     def capture_validation_time(context)
-      timed_result = GraphQLMetrics.time(self.pre_context.value.query_start_time_monotonic) { yield }
+      timed_result = GraphQLMetrics.time(pre_context.value.query_start_time_monotonic) { yield }
 
       ns = context.namespace(CONTEXT_NAMESPACE)
       previous_validation_duration = ns[GraphQLMetrics::VALIDATION_DURATION] || 0
 
-      ns[GraphQLMetrics::QUERY_START_TIME] = self.pre_context.value.query_start_time
-      ns[GraphQLMetrics::QUERY_START_TIME_MONOTONIC] = self.pre_context.value.query_start_time_monotonic
-      ns[PARSING_START_TIME_OFFSET] = self.pre_context.value.parsing_start_time_offset
-      ns[PARSING_DURATION] = self.pre_context.value.parsing_duration
+      ns[GraphQLMetrics::QUERY_START_TIME] = pre_context.value.query_start_time
+      ns[GraphQLMetrics::QUERY_START_TIME_MONOTONIC] = pre_context.value.query_start_time_monotonic
+      ns[PARSING_START_TIME_OFFSET] = pre_context.value.parsing_start_time_offset
+      ns[PARSING_DURATION] = pre_context.value.parsing_duration
       ns[VALIDATION_START_TIME_OFFSET] = timed_result.time_since_offset
       ns[GraphQLMetrics::VALIDATION_DURATION] = timed_result.duration + previous_validation_duration
 
