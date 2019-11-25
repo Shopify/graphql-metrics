@@ -53,7 +53,7 @@ DEPENDENCIES
   bundler (~> 2.0.2)
   diffy
   fakeredis
-  graphql (~> 1.9.14)
+  graphql (~> 1.9.15)
   graphql-batch
   graphql-metrics!
   hashdiff

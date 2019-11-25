@@ -81,12 +81,12 @@ module GraphQLMetrics
       ns = context.namespace(CONTEXT_NAMESPACE)
       previous_validation_duration = ns[GraphQLMetrics::VALIDATION_DURATION] || 0
 
-      ns[GraphQLMetrics::QUERY_START_TIME] = pre_context.value.query_start_time
-      ns[GraphQLMetrics::QUERY_START_TIME_MONOTONIC] = pre_context.value.query_start_time_monotonic
+      ns[QUERY_START_TIME] = pre_context.value.query_start_time
+      ns[QUERY_START_TIME_MONOTONIC] = pre_context.value.query_start_time_monotonic
       ns[PARSING_START_TIME_OFFSET] = pre_context.value.parsing_start_time_offset
       ns[PARSING_DURATION] = pre_context.value.parsing_duration
       ns[VALIDATION_START_TIME_OFFSET] = timed_result.time_since_offset
-      ns[GraphQLMetrics::VALIDATION_DURATION] = timed_result.duration + previous_validation_duration
+      ns[VALIDATION_DURATION] = timed_result.duration + previous_validation_duration # TODO more namespace deletes?
 
       timed_result.result
     end

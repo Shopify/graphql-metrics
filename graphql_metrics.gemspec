@@ -39,7 +39,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rake", "~> 10.0"
   spec.add_development_dependency "minitest", "~> 5.0"
   spec.add_development_dependency 'graphql-batch'
-  spec.add_development_dependency "graphql", "~> 1.9.14"
+  spec.add_development_dependency "graphql", "~> 1.9.15"
   spec.add_development_dependency "activesupport", "~> 5.1.5"
   spec.add_development_dependency "pry"
   spec.add_development_dependency "pry-byebug"

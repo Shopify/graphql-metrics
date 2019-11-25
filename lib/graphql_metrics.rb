@@ -30,11 +30,10 @@ module GraphQLMetrics
   INLINE_FIELD_TIMINGS = :inline_field_timings
   LAZY_FIELD_TIMINGS = :lazy_field_timings
 
-  def self.use(schema_defn_proxy)
-    # TODO: Use this. `query_analyzer` is broken upstream.
-    schema_defn = schema_defn_proxy.target
+  # TODO Use once https://github.com/rmosolgo/graphql-ruby/pull/2614 resolved.
+  def self.use(schema_defn, options)
     schema_defn.instrument(:query, Instrumentation.new)
-    schema_defn.query_analyzer(Analyzer)
+    schema_defn.query_analyzer(options[:analyzer])
     schema_defn.tracer(Tracer.new)
   end
 
