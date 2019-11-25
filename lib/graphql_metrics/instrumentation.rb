@@ -3,9 +3,7 @@
 module GraphQLMetrics
   class Instrumentation
     def before_query(query)
-      query_present_and_valid = query.valid? && query.document.to_query_string.present?
-
-      unless query_present_and_valid
+      unless query_present_and_valid?(query)
         query.context[GraphQLMetrics::SKIP_GRAPHQL_METRICS_ANALYSIS] = true
       end
 
@@ -35,8 +33,14 @@ module GraphQLMetrics
       }
 
       analyzer = ns[GraphQLMetrics::ANALYZER_INSTANCE_KEY]
-      analyzer.extract_query(runtime_query_metrics: runtime_query_metrics)
       analyzer.extract_fields_with_runtime_metrics
+      analyzer.extract_query(runtime_query_metrics: runtime_query_metrics)
+    end
+
+    private
+
+    def query_present_and_valid?(query)
+      query.valid? && query.document.to_query_string.present?
     end
   end
 end
