@@ -33,7 +33,7 @@ Or install it yourself as:
 
 ## Usage
 
-Get started by defining your own Analyzer, inheriting from `GraphQLMetrics::Analyzer`.
+Get started by defining your own Analyzer, inheriting from `GraphQL::Metrics::Analyzer`.
 
 The following analyzer demonstrates a simple way to capture commonly used metrics sourced from key parts of your schema
 definition, the query document being served, as well as runtime query and resolver timings. In this toy example, all of
@@ -45,13 +45,13 @@ What you do with these captured metrics is up to you!
 ### Define your own analyzer subclass
 
 ```ruby
-  class CaptureAllMetricsAnalyzer < GraphQLMetrics::Analyzer
+  class CaptureAllMetricsAnalyzer < GraphQL::Metrics::Analyzer
     ANALYZER_NAMESPACE = :capture_all_metrics_analyzer_namespace
 
     def initialize(query_or_multiplex)
       super
 
-      # `query` is defined on instances of objects inheriting from GraphQLMetrics::Analyzer
+      # `query` is defined on instances of objects inheriting from GraphQL::Metrics::Analyzer
       ns = query.context.namespace(ANALYZER_NAMESPACE)
       ns[:simple_extractor_results] = {}
     end
@@ -84,26 +84,26 @@ What you do with these captured metrics is up to you!
       #
       # Or store them on the query context:
       store_metrics(:queries, metrics.merge(custom_metrics_from_context))
-
-      # For use after calling query.result, in this case by digging them out, for example in a Rails controller:
-      # class GraphQLController < ...
-      #   def graph_ql
-      #     query_result = graphql_query.result.to_h
-      #     do_something_with_metrics(query.context[:simple_extractor_results])
-      #     render json: graphql_query.result
-      #   end
-      # end
     end
 
-    # @param metrics [Hash] Field selection metrics, including resolver timings metrics, also ahering to the
-    # Apollo Tracing spec referred to above.
+    # For use after controller:
+    # class GraphQLController < ActionController::Base
+    #   def graphql_query
+    #     query_result = graphql_query.result.to_h
+    #     do_something_with_metrics(query.context[:simple_extractor_results])
+    #     render json: graphql_query.result
+    #   end
+    # end
 
+    # @param metrics [Hash] Field selection metrics, including resolver timings metrics, also adhering to the Apollo
+    # Tracing spec referred to above.
+    #
     # `resolver_timings` is populated any time a field is resolved (which may be many times, if the field is nested
     # within a list field e.g. a Relay connection field). There should always be at least one of these per field in
     # a query.
     #
-    # `lazy_resolver_timings` is only populated by fields that are resolved lazily (for example using the
-    # graphql-batch gem) or that are otherwise resolved with a Promise. Any time spent in the field's resolver to
+    # `lazy_resolver_timings` is nullable, and is only populated by fields that are resolved lazily (for example using
+    # the graphql-batch gem) or that are otherwise resolved with a Promise. Any time spent in the field's resolver to
     # prepare work to be done "later" in a Promise, or batch loader will be captured in `resolver_timings`. The time
     # spent actually doing lazy field loading, including time spent within a batch loader can be obtained from
     # `lazy_resolver_timings`.
@@ -118,7 +118,10 @@ What you do with these captured metrics is up to you!
     #     start_time_offset: 0.011901999998372048,
     #     duration: 5.999987479299307e-06}
     #   ],
-    #   lazy_resolver_timings: nil,
+    #   lazy_resolver_timings: [
+    #     start_time_offset: 0.011901999998372048,
+    #     duration: 5.999987479299307e-06}
+    #   ],
     # }
     def field_extracted(metrics)
       store_metrics(:fields, metrics)
@@ -152,13 +155,13 @@ What you do with these captured metrics is up to you!
   end
 ```
 
-Once defined, you can opt into capturing all metrics seen above by simply including GraphQLMetrics as a plugin on your
+Once defined, you can opt into capturing all metrics seen above by simply including GraphQL::Metrics as a plugin on your
 schema.
 
 ### Make use of your analyzer
 
 Ensure that your schema is using the graphql-ruby 1.9+ `GraphQL::Execution::Interpreter` and `GraphQL::Analysis::AST`
-engine, and then simply add `use GraphQLMetrics, analyzer: SimpleAnalyzer, options: { }`.
+engine, and then simply add `use GraphQL::Metrics, analyzer: SimpleAnalyzer, options: { }`.
 
 (TODO, what options should contain).
 
@@ -173,10 +176,10 @@ class Schema < GraphQL::Schema
   use GraphQL::Analysis::AST # Required.
 
   # TODO: This is broken upstream. For now it's:
-  # use GraphQLMetrics, analyzer: SimpleAnalyzer, options: {}
-  instrument :query, GraphQLMetrics::Instrumentation.new
+  # use GraphQL::Metrics, analyzer: SimpleAnalyzer, options: {}
+  instrument :query, GraphQL::Metrics::Instrumentation.new
   query_analyzer SimpleAnalyzer
-  tracer GraphQLMetrics::Tracer.new
+  tracer GraphQL::Metrics::Tracer.new
 
   use GraphQL::Batch # Optional, but highly recommended. See https://github.com/Shopify/graphql-batch/.
 end
@@ -185,7 +188,7 @@ end
 ### Optionally, only gather static metrics
 
 If you don't care to capture runtime metrics like query and resolver timings, you can use your analyzer a standalone
-analyzer without `GraphQLMetrics::Instrumentation` and `tracer GraphQLMetrics::Tracer`, like so:
+analyzer without `GraphQL::Metrics::Instrumentation` and `tracer GraphQL::Metrics::Tracer`, like so:
 
 ```ruby
 class Schema < GraphQL::Schema
@@ -218,4 +221,4 @@ The gem is available as open source under the terms of the [MIT License](https:/
 
 ## Code of Conduct
 
-Everyone interacting in the GraphQLMetrics project’s codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/[USERNAME]/graphql-metrics/blob/master/CODE_OF_CONDUCT.md).
+Everyone interacting in the GraphQL::Metrics project’s codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/[USERNAME]/graphql-metrics/blob/master/CODE_OF_CONDUCT.md).

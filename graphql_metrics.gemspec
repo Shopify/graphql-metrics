@@ -1,11 +1,11 @@
 
 lib = File.expand_path("../lib", __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require "graphql_metrics/version"
+require "graphql/metrics/version"
 
 Gem::Specification.new do |spec|
   spec.name          = "graphql-metrics"
-  spec.version       = GraphQLMetrics::VERSION
+  spec.version       = GraphQL::Metrics::VERSION
   spec.authors       = ["Christopher Butcher"]
   spec.email         = ["gems@shopify.com"]
 
@@ -34,12 +34,12 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.add_runtime_dependency "concurrent-ruby", "~> 1.1.0"
+  spec.add_runtime_dependency "graphql", "~> 1.9.15"
 
   spec.add_development_dependency "bundler", "~> 2.0.2"
   spec.add_development_dependency "rake", "~> 10.0"
   spec.add_development_dependency "minitest", "~> 5.0"
   spec.add_development_dependency 'graphql-batch'
-  spec.add_development_dependency "graphql", "~> 1.9.15"
   spec.add_development_dependency "activesupport", "~> 5.1.5"
   spec.add_development_dependency "pry"
   spec.add_development_dependency "pry-byebug"

@@ -14,6 +14,6 @@ require 'ostruct'
 require 'diffy'
 require 'hashdiff'
 
-require "graphql_metrics"
 require 'graphql'
+require "graphql/metrics"
 require 'fakeredis'
