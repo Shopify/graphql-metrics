@@ -31,13 +31,6 @@ module GraphQL
     INLINE_FIELD_TIMINGS = :inline_field_timings
     LAZY_FIELD_TIMINGS = :lazy_field_timings
 
-    # TODO Use once https://github.com/rmosolgo/graphql-ruby/pull/2614 resolved.
-    def self.use(schema_defn, options)
-      schema_defn.instrument(:query, Instrumentation.new)
-      schema_defn.query_analyzer(options[:analyzer])
-      schema_defn.tracer(Tracer.new)
-    end
-
     def self.timings_capture_enabled?(context)
       return false unless context
       !!context.namespace(CONTEXT_NAMESPACE)[TIMINGS_CAPTURE_ENABLED]
@@ -56,6 +49,23 @@ module GraphQL
     end
 
     class TimedResult
+      # NOTE: `time_since_offset` is used to produce start times timed phases of execution (validation, field
+      # resolution). These start times are relative to the executed operation's start time, which is captured at the
+      # outset of document parsing.
+      #
+      # The times produced are intentionally similar to:
+      # https://github.com/apollographql/apollo-tracing#response-format
+      #
+      # Taking a field resolver start offset example:
+      #
+      # <   start offset   >
+      # |------------------|----------|--------->
+      # OS (t=0)           FS (t=1)   FE (t=2)
+      #
+      # OS = Operation start time
+      # FS = Field resolver start time
+      # FE = Field resolver end time
+      #
       attr_reader :result, :start_time, :duration, :time_since_offset
 
       def initialize(offset_time = nil)

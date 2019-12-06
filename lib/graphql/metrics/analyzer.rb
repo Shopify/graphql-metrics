@@ -1,29 +1,5 @@
 # frozen_string_literal: true
 
-# Execution order:
-# When used as instrumentation, an analyzer and tracing, the order of execution is:
-#
-# * Tracer.setup_tracing_before_lexing
-# * Tracer.capture_parsing_time
-# * Instrumentation.before_query (context setup)
-# * Tracer.capture_validation_time (twice, once for `analyze_query`, then `analyze_multiplex`)
-# * Analyzer#initialize (bit more context setup, instance vars setup)
-# * Analyzer#result
-# * Tracer.trace_field (n times)
-# * Instrumentation.after_query (call query and field callbacks, now that we have all static and runtime metrics
-#   gathered)
-# * Analyzer#extract_query
-# * Analyzer#query_extracted
-# * Analyzer#extract_fields_with_runtime_metrics
-#   * calls Analyzer#field_extracted n times
-#
-# When used as a simple analyzer, which doesn't gather or emit any runtime metrics (timings, arg values):
-# * Analyzer#initialize
-# * Analyzer#field_extracted n times
-# * Analyzer#result
-# * Analyzer#extract_query
-# * Analyzer#query_extracted
-
 module GraphQL
   module Metrics
     class Analyzer < GraphQL::Analysis::AST::Analyzer

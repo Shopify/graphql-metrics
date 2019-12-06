@@ -22,6 +22,9 @@ module GraphQL
         return if query.context[GraphQL::Metrics::SKIP_GRAPHQL_METRICS_ANALYSIS]
 
         ns = query.context.namespace(CONTEXT_NAMESPACE)
+
+        # NOTE: The start time stored at `ns[GraphQL::Metrics::QUERY_START_TIME_MONOTONIC]` is captured during query
+        # parsing, which occurs before `Instrumentation#before_query`.
         query_duration = GraphQL::Metrics.current_time_monotonic - ns[GraphQL::Metrics::QUERY_START_TIME_MONOTONIC]
 
         runtime_query_metrics = {

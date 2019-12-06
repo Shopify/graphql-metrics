@@ -99,11 +99,10 @@ What you do with these captured metrics is up to you!
     # Tracing spec referred to above.
     #
     # `resolver_timings` is populated any time a field is resolved (which may be many times, if the field is nested
-    # within a list field e.g. a Relay connection field). There should always be at least one of these per field in
-    # a query.
+    # within a list field e.g. a Relay connection field).
     #
-    # `lazy_resolver_timings` is nullable, and is only populated by fields that are resolved lazily (for example using
-    # the graphql-batch gem) or that are otherwise resolved with a Promise. Any time spent in the field's resolver to
+    # `lazy_resolver_timings` is only populated by fields that are resolved lazily (for example using the
+    # graphql-batch gem) or that are otherwise resolved with a Promise. Any time spent in the field's resolver to
     # prepare work to be done "later" in a Promise, or batch loader will be captured in `resolver_timings`. The time
     # spent actually doing lazy field loading, including time spent within a batch loader can be obtained from
     # `lazy_resolver_timings`.
@@ -116,11 +115,11 @@ What you do with these captured metrics is up to you!
     #   path: ["post", "id"],
     #   resolver_timings: [
     #     start_time_offset: 0.011901999998372048,
-    #     duration: 5.999987479299307e-06}
+    #     duration: 5.999987479299307e-06
     #   ],
     #   lazy_resolver_timings: [
-    #     start_time_offset: 0.011901999998372048,
-    #     duration: 5.999987479299307e-06}
+    #     start_time_offset: 0.031901999998372048,
+    #     duration: 5.999987479299307e-06
     #   ],
     # }
     def field_extracted(metrics)
@@ -161,9 +160,7 @@ schema.
 ### Make use of your analyzer
 
 Ensure that your schema is using the graphql-ruby 1.9+ `GraphQL::Execution::Interpreter` and `GraphQL::Analysis::AST`
-engine, and then simply add `use GraphQL::Metrics, analyzer: SimpleAnalyzer, options: { }`.
-
-(TODO, what options should contain).
+engine, and then simply add the below `GraphQL::Metrics` plugins.
 
 This opts you in to capturing all static and runtime metrics seen above.
 
@@ -175,8 +172,6 @@ class Schema < GraphQL::Schema
   use GraphQL::Execution::Interpreter # Required.
   use GraphQL::Analysis::AST # Required.
 
-  # TODO: This is broken upstream. For now it's:
-  # use GraphQL::Metrics, analyzer: SimpleAnalyzer, options: {}
   instrument :query, GraphQL::Metrics::Instrumentation.new
   query_analyzer SimpleAnalyzer
   tracer GraphQL::Metrics::Tracer.new
@@ -204,6 +199,38 @@ end
 
 Your analyzer will still be called with `query_extracted`, `field_extracted`, but with timings metrics omitted.
 `argument_extracted` will work exactly the same, whether instrumentation and tracing are used or not.
+
+## Order of execution
+
+Because of the structure of graphql-ruby's plugin architecture, it may be difficult to build an intuition around the
+order in which methods defined on `GraphQL::Metrics::Instrumentation`, `GraphQL::Metrics::Tracer` and subclasses of
+`GraphQL::Metrics::Analyzer` run.
+
+Although you ideally will not need to care about these details if you are simply using this gem to gather metrics in
+your application as intended, here's a breakdown of the order of execution of the methods involved:
+
+ When used as instrumentation, an analyzer and tracing, the order of execution is:
+
+* Tracer.setup_tracing_before_lexing
+* Tracer.capture_parsing_time
+* Instrumentation.before_query (context setup)
+* Tracer.capture_validation_time (twice, once for `analyze_query`, then `analyze_multiplex`)
+* Analyzer#initialize (bit more context setup, instance vars setup)
+* Analyzer#result
+* Tracer.trace_field (n times)
+* Instrumentation.after_query (call query and field callbacks, now that we have all static and runtime metrics
+  gathered)
+* Analyzer#extract_query
+* Analyzer#query_extracted
+* Analyzer#extract_fields_with_runtime_metrics
+  * calls Analyzer#field_extracted n times
+
+When used as a simple analyzer, which doesn't gather or emit any runtime metrics (timings, arg values):
+* Analyzer#initialize
+* Analyzer#field_extracted n times
+* Analyzer#result
+* Analyzer#extract_query
+* Analyzer#query_extracted
 
 ## Development
 

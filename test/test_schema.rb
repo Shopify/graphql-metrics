@@ -93,6 +93,8 @@ class QueryRoot < GraphQL::Schema::Object
   end
 
   def post(id:, locale:)
+    return if id == 'missing_post'
+
     { id: 1, title: "Hello, world!", body: "... you're still here?" }
   end
 end

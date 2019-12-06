@@ -15,7 +15,7 @@ module GraphQL
         GRAPHQL_GEM_TRACING_LAZY_FIELD_KEY = 'execute_field_lazy'
       ]
 
-      def trace(key, data)
+      def trace(key, data, &block)
         # NOTE: Context doesn't exist yet during lexing, parsing.
         possible_context = data[:query]&.context
 
@@ -26,14 +26,14 @@ module GraphQL
         # chronological order.
         case key
         when GRAPHQL_GEM_LEXING_KEY
-          return setup_tracing_before_lexing { yield }
+          return setup_tracing_before_lexing(&block)
         when GRAPHQL_GEM_PARSING_KEY
-          return capture_parsing_time { yield }
+          return capture_parsing_time(&block)
         when *GRAPHQL_GEM_VALIDATION_KEYS
           context = possible_context
 
           return yield unless context.query.valid?
-          return capture_validation_time(context) { yield }
+          return capture_validation_time(context, &block)
         when *GRAPHQL_GEM_TRACING_FIELD_KEYS
           return yield if data[:query].context[SKIP_FIELD_AND_ARGUMENT_METRICS]
           return yield unless GraphQL::Metrics.timings_capture_enabled?(data[:query].context)
@@ -47,7 +47,7 @@ module GraphQL
             GraphQL::Metrics::LAZY_FIELD_TIMINGS
           end
 
-          trace_field(context_key, data) { yield }
+          trace_field(context_key, data, &block)
         else
           return yield
         end

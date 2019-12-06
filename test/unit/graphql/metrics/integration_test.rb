@@ -84,9 +84,6 @@ module GraphQL
         query_analyzer SimpleAnalyzer
         tracer GraphQL::Metrics::Tracer.new
 
-        # TODO: Make this one call instead. Blocked, since this is broken upstream.
-        # use GraphQL::Metrics, analyzer: SimpleAnalyzer
-
         def self.parse_error(err, _context)
           return if err.is_a?(GraphQL::ParseError)
           raise err
@@ -341,6 +338,24 @@ module GraphQL
         actual_arguments = results[:arguments]
 
         assert_equal_with_diff_on_failure(shared_expected_arguments_metrics, actual_arguments)
+      end
+
+      test 'fields requested that are not resolved (e.g. id for a post that itself was never resolved) produce no inline field timings' do
+        query = GraphQL::Query.new(
+          SchemaWithFullMetrics,
+          '{ post(id: "missing_post") { id } }',
+        )
+        result = query.result.to_h
+
+        refute result['errors'].present?
+        assert result['data'].present?
+
+        results = query.context.namespace(SimpleAnalyzer::ANALYZER_NAMESPACE)[:simple_extractor_results]
+
+        actual_fields = results[:fields]
+        id_field_metric = actual_fields.find { |f| f[:path] == %w(post id) }
+
+        assert_equal [], id_field_metric[:resolver_timings]
       end
 
       # Note: Arguments metrics extracted should be the same, whether the query provided input object args inline or
