@@ -5,11 +5,14 @@ module GraphQL
     class Instrumentation
       def before_query(query)
         unless query_present_and_valid?(query)
+          # Setting this prevents Analyzer and Tracer from trying to gather runtime metrics for invalid queries.
           query.context[GraphQL::Metrics::SKIP_GRAPHQL_METRICS_ANALYSIS] = true
         end
 
-        # NOTE: This context value may have been set to true in the application, so we should still return early here if
-        # it's set, even if the query is valid.
+        # Even if queries are present and valid, applications may set this context value in order to opt out of
+        # having Analyzer and Tracer gather runtime metrics.
+        # If we're skipping runtime metrics, then both Instrumentation before_ and after_query can and should be
+        # short-circuited as well.
         return if query.context[GraphQL::Metrics::SKIP_GRAPHQL_METRICS_ANALYSIS]
 
         ns = query.context.namespace(CONTEXT_NAMESPACE)

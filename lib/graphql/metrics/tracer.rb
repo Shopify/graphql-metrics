@@ -3,9 +3,6 @@
 module GraphQL
   module Metrics
     class Tracer
-      # NOTE: Used to store timings from lexing, parsing, validation, before we have a context to store
-      # values in. Uses thread-safe Concurrent::ThreadLocalVar to store a set of values per thread.
-
       # NOTE: These constants come from the graphql ruby gem.
       GRAPHQL_GEM_LEXING_KEY = 'lex'
       GRAPHQL_GEM_PARSING_KEY = 'parse'
@@ -56,6 +53,8 @@ module GraphQL
       private
 
       def pre_context
+        # NOTE: This is used to store timings from lexing, parsing, validation, before we have a context to store
+        # values in. Uses thread-safe Concurrent::ThreadLocalVar to store a set of values per thread.
         @pre_context ||= Concurrent::ThreadLocalVar.new(OpenStruct.new)
       end
 
