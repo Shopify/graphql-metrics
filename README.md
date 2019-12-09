@@ -1,4 +1,4 @@
-# GraphQL Metrics Extractor
+# GraphQL Metrics
 
 ![](https://github.com/Shopify/graphql-metrics/workflows/Ruby/badge.svg)
 
@@ -33,132 +33,204 @@ Or install it yourself as:
 
 ## Usage
 
-You can get started quickly with all features enabled by instrumenting your queries
-with an extractor class (defined below) and with `TimedBatchExecutor` passed as
-a custom executor when initializing `GraphQL::Batch` instrumentation if you're using it.
+Get started by defining your own Analyzer, inheriting from `GraphQL::Metrics::Analyzer`.
+
+The following analyzer demonstrates a simple way to capture commonly used metrics sourced from key parts of your schema
+definition, the query document being served, as well as runtime query and resolver timings. In this toy example, all of
+this data is simply stored on the GraphQL::Query context, under a namespace to avoid collisions with other analyzers
+etc.
+
+What you do with these captured metrics is up to you!
+
+### Define your own analyzer subclass
+
+```ruby
+  class CaptureAllMetricsAnalyzer < GraphQL::Metrics::Analyzer
+    ANALYZER_NAMESPACE = :capture_all_metrics_analyzer_namespace
+
+    def initialize(query_or_multiplex)
+      super
+
+      # `query` is defined on instances of objects inheriting from GraphQL::Metrics::Analyzer
+      ns = query.context.namespace(ANALYZER_NAMESPACE)
+      ns[:simple_extractor_results] = {}
+    end
+
+    # @param metrics [Hash] Query metrics, including a few details about the query document itself, as well as runtime
+    # timings metrics, intended to be compatible with the Apollo Tracing spec:
+    # https://github.com/apollographql/apollo-tracing#response-format
+    #
+    # {
+    #   operation_type: "query",
+    #   operation_name: "PostDetails",
+    #   query_start_time: 1573833076.027327,
+    #   query_duration: 2.0207119999686256,
+    #   parsing_start_time_offset: 0.0010339999571442604,
+    #   parsing_duration: 0.0008190000080503523,
+    #   validation_start_time_offset: 0.0030819999519735575,
+    #   validation_duration: 0.01704599999357015,
+    # }
+    #
+    # You can use these metrics to track high-level query performance, along with any other details you wish to
+    # manually capture from `query` and/or `query.context`.
+    def query_extracted(metrics)
+      custom_metrics_from_context = {
+        request_id: query.context[:request_id],
+        # ...
+      }
+
+      # You can make use of captured metrics here (logging to Kafka, request logging etc.)
+      # log_metrics(:fields, metrics)
+      #
+      # Or store them on the query context:
+      store_metrics(:queries, metrics.merge(custom_metrics_from_context))
+    end
+
+    # For use after controller:
+    # class GraphQLController < ActionController::Base
+    #   def graphql_query
+    #     query_result = graphql_query.result.to_h
+    #     do_something_with_metrics(query.context[:simple_extractor_results])
+    #     render json: graphql_query.result
+    #   end
+    # end
+
+    # @param metrics [Hash] Field selection metrics, including resolver timings metrics, also adhering to the Apollo
+    # Tracing spec referred to above.
+    #
+    # `resolver_timings` is populated any time a field is resolved (which may be many times, if the field is nested
+    # within a list field e.g. a Relay connection field).
+    #
+    # `lazy_resolver_timings` is only populated by fields that are resolved lazily (for example using the
+    # graphql-batch gem) or that are otherwise resolved with a Promise. Any time spent in the field's resolver to
+    # prepare work to be done "later" in a Promise, or batch loader will be captured in `resolver_timings`. The time
+    # spent actually doing lazy field loading, including time spent within a batch loader can be obtained from
+    # `lazy_resolver_timings`.
+    #
+    # {
+    #   field_name: "id",
+    #   return_type_name: "ID",
+    #   parent_type_name: "Post",
+    #   deprecated: false,
+    #   path: ["post", "id"],
+    #   resolver_timings: [
+    #     start_time_offset: 0.011901999998372048,
+    #     duration: 5.999987479299307e-06
+    #   ],
+    #   lazy_resolver_timings: [
+    #     start_time_offset: 0.031901999998372048,
+    #     duration: 5.999987479299307e-06
+    #   ],
+    # }
+    def field_extracted(metrics)
+      store_metrics(:fields, metrics)
+    end
+
+    # @param metrics [Hash] Argument usage metrics, including a few details about the query document itself, as well
+    # as resolver timings metrics, also ahering to the Apollo Tracing spec referred to above.
+    # {
+    #   argument_name: "id",
+    #   argument_type_name: "ID",
+    #   parent_field_name: "post",
+    #   parent_field_type_name: "QueryRoot",
+    #   default_used: false,
+    #   value_is_null: false,
+    #   value: <GraphQL::Query::Arguments::ArgumentValue>,
+    # }
+    #
+    # `value` is exposed here, in case you want to get access to the argument's definition, including the type
+    # class which defines it, e.g. `metrics[:value].definition.metadata[:type_class]`
+    def argument_extracted(metrics)
+      store_metrics(:arguments, metrics)
+    end
+
+    private
+
+    def store_metrics(context_key, metrics)
+      ns = query.context.namespace(ANALYZER_NAMESPACE)
+      ns[:simple_extractor_results][context_key] ||= []
+      ns[:simple_extractor_results][context_key] << metrics
+    end
+  end
+```
+
+Once defined, you can opt into capturing all metrics seen above by simply including GraphQL::Metrics as a plugin on your
+schema.
+
+### Make use of your analyzer
+
+Ensure that your schema is using the graphql-ruby 1.9+ `GraphQL::Execution::Interpreter` and `GraphQL::Analysis::AST`
+engine, and then simply add the below `GraphQL::Metrics` plugins.
+
+This opts you in to capturing all static and runtime metrics seen above.
 
 ```ruby
 class Schema < GraphQL::Schema
   query QueryRoot
   mutation MutationRoot
 
-  use LoggingExtractor # Replace me with your own subclass of GraphQLMetrics::Extractor!
-  use GraphQL::Batch, executor_class: GraphQLMetrics::TimedBatchExecutor # Optional.
+  use GraphQL::Execution::Interpreter # Required.
+  use GraphQL::Analysis::AST # Required.
+
+  instrument :query, GraphQL::Metrics::Instrumentation.new
+  query_analyzer SimpleAnalyzer
+  tracer GraphQL::Metrics::Tracer.new
+
+  use GraphQL::Batch # Optional, but highly recommended. See https://github.com/Shopify/graphql-batch/.
 end
 ```
 
-Define your own extractor class, inheriting from `GraphQLMetrics::Extractor`, and
-implementing the methods below, as needed.
+### Optionally, only gather static metrics
 
-Here's an example of a simple extractor that logs out all GraphQL query details.
+If you don't care to capture runtime metrics like query and resolver timings, you can use your analyzer a standalone
+analyzer without `GraphQL::Metrics::Instrumentation` and `tracer GraphQL::Metrics::Tracer`, like so:
 
 ```ruby
-class LoggingExtractor < GraphQLMetrics::Instrumentation
-  def query_extracted(metrics, _metadata)
-    Rails.logger.debug({
-      query_string: metrics[:query_string],     # "query Project { project(name: "GraphQL") { tagline } }"
-      operation_type: metrics[:operation_type], # "query"
-      operation_name: metrics[:operation_name], # "Project"
-      duration: metrics[:duration]              # 0.1
-    })
-  end
+class Schema < GraphQL::Schema
+  query QueryRoot
+  mutation MutationRoot
 
-  def field_extracted(metrics, _metadata)
-    Rails.logger.debug({
-      type_name: metrics[:type_name],           # "QueryRoot"
-      field_name: metrics[:field_name],         # "project"
-      deprecated: metrics[:deprecated],         # false
-      resolver_times: metrics[:resolver_times], # [0.1]
-    })
-  end
+  use GraphQL::Execution::Interpreter # Required.
+  use GraphQL::Analysis::AST # Required.
 
-  # NOTE: Applicable only if you set `use GraphQL::Batch, executor_class: GraphQLMetrics::TimedBatchExecutor`
-  # in your schema.
-  def batch_loaded_field_extracted(metrics, _metadata)
-    Rails.logger.debug({
-      key: metrics[:key],                                 # "CommentLoader/Comment"
-      identifiers: metrics[:identifiers],                 # "Comment/_/string/_/symbol/Class/?"
-      times: metrics[:times],                             # [0.1, 0.2, 4]
-      perform_queue_sizes: metrics[:perform_queue_sizes], # [3]
-    })
-  end
-
-  def argument_extracted(metrics, _metadata)
-    Rails.logger.debug({
-      name: metrics[:name],                           # "post"
-      type: metrics[:type],                           # "postInput"
-      value_is_null: metrics[:value_is_null],         # false
-      default_used: metrics[:default_used],           # false
-      parent_input_type: metrics[:parent_input_type], # "PostInput"
-      field_name: metrics[:field_name],               # "postCreate"
-      field_base_type: metrics[:field_base_type],     # "MutationRoot"
-    })
-  end
-
-  def variable_extracted(metrics, _metadata)
-    Rails.logger.debug({
-      operation_name: metrics[:operation_name],           # "MyMutation"
-      unwrapped_type_name: metrics[:unwrapped_type_name], # "PostInput"
-      type: metrics[:type],                               # "PostInput!"
-      default_value_type: metrics[:default_value_type],   # "IMPLICIT_NULL"
-      provided_value: metrics[:provided_value],           # false
-      default_used: metrics[:default_used],               # false
-      used_in_operation: metrics[:used_in_operation],     # true
-    })
-  end
-
-  # Define this if you want to do something with the query just before query logging.
-  def before_query_extracted(query, query_context)
-    Rails.logger.debug({
-      something_from_context: query_context[:something]
-    })
-  end
-
-  # Return something `truthy` if you want skip query extraction entirely, based on the query or
-  # for example its context.
-  def skip_extraction?(_query)
-    false
-  end
-
-  # Return something `truthy` if you want skip producing field resolution
-  # timing metrics. Applicable only if `field_extracted` is also defined.
-  def skip_field_resolution_timing?(_query, _metadata)
-    false
-  end
-
-  # Use or clear state after metrics extraction
-  def after_query_teardown(_query)
-    # Use or clear state after metrics extraction, i.e. Flush metrics to Datadog, Kafka etc.
-    #   i.e. kafka.producer.produce('graphql_metrics', @collected_metrics); kafka.producer.deliver_messages
-  end
+  query_analyzer SimpleAnalyzer
 end
 ```
 
-You can also define ad hoc query Extractors that can work with instances of GraphQL::Query, for example:
+Your analyzer will still be called with `query_extracted`, `field_extracted`, but with timings metrics omitted.
+`argument_extracted` will work exactly the same, whether instrumentation and tracing are used or not.
 
-```ruby
-class TypeUsageExtractor < GraphQLMetrics::Extractor
-  attr_reader :types_used
+## Order of execution
 
-  def initialize
-    @types_used = Set.new
-  end
+Because of the structure of graphql-ruby's plugin architecture, it may be difficult to build an intuition around the
+order in which methods defined on `GraphQL::Metrics::Instrumentation`, `GraphQL::Metrics::Tracer` and subclasses of
+`GraphQL::Metrics::Analyzer` run.
 
-  def field_extracted(metrics, _metadata)
-    @types_used << metrics[:type_name]
-  end
-end
+Although you ideally will not need to care about these details if you are simply using this gem to gather metrics in
+your application as intended, here's a breakdown of the order of execution of the methods involved:
 
-# ...
+ When used as instrumentation, an analyzer and tracing, the order of execution is:
 
-extractor = TypeUsageExtractor.new
-extractor.extract!(query)
-puts extractor.types_used
-# => ["Comment", "Post", "QueryRoot"]
-```
+* Tracer.setup_tracing_before_lexing
+* Tracer.capture_parsing_time
+* Instrumentation.before_query (context setup)
+* Tracer.capture_validation_time (twice, once for `analyze_query`, then `analyze_multiplex`)
+* Analyzer#initialize (bit more context setup, instance vars setup)
+* Analyzer#result
+* Tracer.trace_field (n times)
+* Instrumentation.after_query (call query and field callbacks, now that we have all static and runtime metrics
+  gathered)
+* Analyzer#extract_query
+* Analyzer#query_extracted
+* Analyzer#extract_fields_with_runtime_metrics
+  * calls Analyzer#field_extracted n times
 
-Note that resolver-timing related data like `duration` in `query_extracted` and `resolver_times` in `field_extracted`
-won't be available when using an ad hoc Extractor, since the query isn't actually being run; it's only analyzed.
+When used as a simple analyzer, which doesn't gather or emit any runtime metrics (timings, arg values):
+* Analyzer#initialize
+* Analyzer#field_extracted n times
+* Analyzer#result
+* Analyzer#extract_query
+* Analyzer#query_extracted
 
 ## Development
 
@@ -176,4 +248,4 @@ The gem is available as open source under the terms of the [MIT License](https:/
 
 ## Code of Conduct
 
-Everyone interacting in the GraphQLMetrics project’s codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/[USERNAME]/graphql-metrics/blob/master/CODE_OF_CONDUCT.md).
+Everyone interacting in the GraphQL::Metrics project’s codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/[USERNAME]/graphql-metrics/blob/master/CODE_OF_CONDUCT.md).
