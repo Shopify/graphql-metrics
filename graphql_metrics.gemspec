@@ -45,4 +45,6 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "hashdiff"
   spec.add_development_dependency "fakeredis"
   spec.add_development_dependency "minitest-focus"
+  spec.add_development_dependency "sorbet"
+  spec.add_development_dependency "sorbet-runtime"
 end
