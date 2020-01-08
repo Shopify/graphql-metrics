@@ -116,7 +116,7 @@ module GraphQL
           argument_type_name: value.definition.type.unwrap.to_s,
           parent_field_name: field_defn.name,
           parent_field_type_name: field_defn.metadata[:type_class].owner.graphql_name,
-          parent_input_type: parent_input_object&.graphql_name,
+          parent_input_object_type: parent_input_object&.graphql_name,
           default_used: value.default_used?,
           value_is_null: value.value.nil?,
           value: value,
