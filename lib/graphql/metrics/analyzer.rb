@@ -85,34 +85,38 @@ module GraphQL
 
       private
 
-      def extract_arguments(argument, field_defn)
+      def extract_arguments(argument, field_defn, parent_input_object = nil)
         case argument
         when Array
           argument.each do |a|
-            extract_arguments(a, field_defn)
+            extract_arguments(a, field_defn, parent_input_object)
           end
         when Hash
           argument.each_value do |a|
-            extract_arguments(a, field_defn)
+            extract_arguments(a, field_defn, parent_input_object)
           end
         when ::GraphQL::Query::Arguments
           argument.each_value do |arg_val|
-            extract_arguments(arg_val, field_defn)
+            extract_arguments(arg_val, field_defn, parent_input_object)
           end
         when ::GraphQL::Query::Arguments::ArgumentValue
-          extract_argument(argument, field_defn)
-          extract_arguments(argument.value, field_defn)
+          extract_argument(argument, field_defn, parent_input_object)
+          extract_arguments(argument.value, field_defn, parent_input_object)
         when ::GraphQL::Schema::InputObject
-          extract_arguments(argument.arguments.argument_values.values, field_defn)
+          input_object_argument_values = argument.arguments.argument_values.values
+          parent_input_object = input_object_argument_values.first.definition.metadata[:type_class].owner
+
+          extract_arguments(input_object_argument_values, field_defn, parent_input_object)
         end
       end
 
-      def extract_argument(value, field_defn)
+      def extract_argument(value, field_defn, parent_input_object = nil)
         static_metrics = {
           argument_name: value.definition.expose_as,
           argument_type_name: value.definition.type.unwrap.to_s,
           parent_field_name: field_defn.name,
           parent_field_type_name: field_defn.metadata[:type_class].owner.graphql_name,
+          parent_input_type: parent_input_object&.graphql_name,
           default_used: value.default_used?,
           value_is_null: value.value.nil?,
           value: value,
