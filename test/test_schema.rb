@@ -68,6 +68,11 @@ class PostInput < GraphQL::Schema::InputObject
   argument :embedded_tags, [TagInput], "Embedded tags on a post", required: true
 end
 
+class PostUpdateInput < GraphQL::Schema::InputObject
+  argument :title, String, "Title for the post", required: false, default_value: ""
+  argument :body, String, "Body of the post", required: false
+end
+
 class PostCreate < GraphQL::Schema::Mutation
   argument :post, PostInput, required: true
 
@@ -79,8 +84,19 @@ class PostCreate < GraphQL::Schema::Mutation
   end
 end
 
+class PostUpdate < GraphQL::Schema::Mutation
+  argument :post, PostUpdateInput, required: true
+
+  field :success, Boolean, null: false
+
+  def resolve(post:)
+    { success: true }
+  end
+end
+
 class MutationRoot < GraphQL::Schema::Object
   field :post_create, mutation: PostCreate
+  field :post_update, mutation: PostUpdate
 end
 
 class QueryRoot < GraphQL::Schema::Object
