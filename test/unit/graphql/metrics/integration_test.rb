@@ -772,6 +772,49 @@ module GraphQL
         assert_equal_with_diff_on_failure(expected_arguments, actual_arguments)
       end
 
+      test 'handles input objects with no required fields (one of which has a default) are passed in as `{}`' do
+        query_document = <<~GRAPHQL
+          mutation PostUpdate {
+            postUpdate(post: {}) {
+              success
+            }
+          }
+        GRAPHQL
+
+        query = GraphQL::Query.new(SchemaWithFullMetrics, query_document)
+        result = query.result.to_h
+        refute result['errors'].present?
+        assert result['data'].present?
+
+        metrics_results = query.context.namespace(SimpleAnalyzer::ANALYZER_NAMESPACE)[:simple_extractor_results]
+        actual_arguments = metrics_results[:arguments]
+
+        expected_arguments = [
+          {
+            :argument_name=>"post",
+            :argument_type_name=>"PostUpdateInput",
+            :parent_field_name=>"postUpdate",
+            :parent_field_type_name=>"MutationRoot",
+            :parent_input_object_type=>nil,
+            :default_used=>false,
+            :value_is_null=>false,
+            :value => SomeArgumentValue.new,
+          },
+          {
+            :argument_name=> "title",
+            :argument_type_name=> "String",
+            :parent_field_name=> "postUpdate",
+            :parent_field_type_name=> "MutationRoot",
+            :parent_input_object_type=> "PostUpdateInput",
+            :default_used=> true,
+            :value_is_null=> false,
+            :value => SomeArgumentValue.new,
+          }
+        ]
+
+        assert_equal_with_diff_on_failure(expected_arguments, actual_arguments)
+      end
+
       private
 
       def assert_equal_with_diff_on_failure(expected, actual)
