@@ -772,7 +772,7 @@ module GraphQL
         assert_equal_with_diff_on_failure(expected_arguments, actual_arguments)
       end
 
-      test 'handles input objects with no required fields (one of which has a default) are passed in as `{}`' do
+      test 'handles input objects with no required fields (ONE of which has a default) are passed in as `{}`' do
         query_document = <<~GRAPHQL
           mutation PostUpdate {
             postUpdate(post: {}) {
@@ -808,6 +808,40 @@ module GraphQL
             :parent_input_object_type=> "PostUpdateInput",
             :default_used=> true,
             :value_is_null=> false,
+            :value => SomeArgumentValue.new,
+          }
+        ]
+
+        assert_equal_with_diff_on_failure(expected_arguments, actual_arguments)
+      end
+
+      test 'handles input objects with no required fields (NONE of which have a default) are passed in as `{}`' do
+        query_document = <<~GRAPHQL
+          mutation PostUpvote {
+            postUpvote(upvote: {}) {
+              success
+            }
+          }
+        GRAPHQL
+
+        query = GraphQL::Query.new(SchemaWithFullMetrics, query_document)
+        result = query.result.to_h
+
+        refute result['errors'].present?
+        assert result['data'].present?
+
+        metrics_results = query.context.namespace(SimpleAnalyzer::ANALYZER_NAMESPACE)[:simple_extractor_results]
+        actual_arguments = metrics_results[:arguments]
+
+        expected_arguments = [
+          {
+            :argument_name=>"upvote",
+            :argument_type_name=>"PostUpvoteInput",
+            :parent_field_name=>"postUpvote",
+            :parent_field_type_name=>"MutationRoot",
+            :parent_input_object_type=>nil,
+            :default_used=>false,
+            :value_is_null=>false,
             :value => SomeArgumentValue.new,
           }
         ]

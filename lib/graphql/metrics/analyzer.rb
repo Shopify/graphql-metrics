@@ -104,7 +104,7 @@ module GraphQL
           extract_arguments(argument.value, field_defn, parent_input_object)
         when ::GraphQL::Schema::InputObject
           input_object_argument_values = argument.arguments.argument_values.values
-          parent_input_object = input_object_argument_values.first&.definition&.metadata[:type_class]&.owner
+          parent_input_object = input_object_argument_values.first&.definition&.metadata&.fetch(:type_class, nil)&.owner
 
           extract_arguments(input_object_argument_values, field_defn, parent_input_object)
         end
