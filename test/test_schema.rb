@@ -73,6 +73,10 @@ class PostUpdateInput < GraphQL::Schema::InputObject
   argument :body, String, "Body of the post", required: false
 end
 
+class PostUpvoteInput < GraphQL::Schema::InputObject
+  argument :upvote_value, Integer, "Upvote 1 or -1", required: false
+end
+
 class PostCreate < GraphQL::Schema::Mutation
   argument :post, PostInput, required: true
 
@@ -94,9 +98,20 @@ class PostUpdate < GraphQL::Schema::Mutation
   end
 end
 
+class PostUpvote < GraphQL::Schema::Mutation
+  argument :upvote, PostUpvoteInput, required: true
+
+  field :success, Boolean, null: false
+
+  def resolve(upvote:)
+    { success: true }
+  end
+end
+
 class MutationRoot < GraphQL::Schema::Object
   field :post_create, mutation: PostCreate
   field :post_update, mutation: PostUpdate
+  field :post_upvote, mutation: PostUpvote
 end
 
 class QueryRoot < GraphQL::Schema::Object
