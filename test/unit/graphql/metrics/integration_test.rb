@@ -50,6 +50,7 @@ module GraphQL
             queries: [],
             fields: [],
             arguments: [],
+            deprecated_enum_values: [],
           }
         end
 
@@ -63,6 +64,10 @@ module GraphQL
 
         def argument_extracted(metrics)
           store_metrics(:arguments, metrics)
+        end
+
+        def enum_value_extracted(metrics)
+          store_metrics(:deprecated_enum_values, metrics)
         end
 
         private
@@ -90,7 +95,7 @@ module GraphQL
         end
       end
 
-      test 'extracts metrics from queries, as well as their fields and arguments' do
+      test 'extracts metrics from queries, as well as their fields, arguments and any deprecated enum values used' do
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,
           kitchen_sink_query_document,
@@ -107,12 +112,15 @@ module GraphQL
         actual_queries = results[:queries]
         actual_fields = results[:fields]
         actual_arguments = results[:arguments]
+        actual_deprecated_enum_values = results[:deprecated_enum_values]
 
         assert_equal_with_diff_on_failure(kitchen_sink_expected_queries, actual_queries)
         assert_equal_with_diff_on_failure(kitchen_sink_expected_fields, actual_fields)
         assert_equal_with_diff_on_failure(kitchen_sink_expected_arguments, actual_arguments)
+        assert_equal_with_diff_on_failure(kitchen_sink_expected_deprecated_enum_values, actual_deprecated_enum_values)
       end
 
+      focus
       test 'extracts metrics in all of the same ways, when a multiplex is executed' do
         queries = [
           {
@@ -208,6 +216,16 @@ module GraphQL
           :default_used => true,
           :value_is_null => false,
           :value => SomeArgumentValue.new,
+        },
+        {
+          :argument_name => "subject",
+          :argument_type_name => "PostSubject",
+          :parent_field_name => "post",
+          :parent_field_type_name => "QueryRoot",
+          :parent_input_object_type => nil,
+          :default_used => true,
+          :value_is_null => true,
+          :value => SomeArgumentValue.new,
         }]
 
         assert_equal_with_diff_on_failure(expected_other_query_queries, other_query_metrics[:queries])
@@ -290,7 +308,7 @@ module GraphQL
 
         results = query.context.namespace(SimpleAnalyzer::ANALYZER_NAMESPACE)[:simple_extractor_results]
 
-        expected = {:queries=>[], :fields=>[], :arguments=>[]}
+        expected = {:queries=>[], :fields=>[], :arguments=>[], :deprecated_enum_values=>[]}
         assert_equal(expected, results)
       end
 
@@ -767,6 +785,16 @@ module GraphQL
           :default_used => true,
           :value_is_null => false,
           :value => SomeArgumentValue.new,
+        },
+        {
+          :argument_name => "subject",
+          :argument_type_name => "PostSubject",
+          :parent_field_name => "post",
+          :parent_field_type_name => "QueryRoot",
+          :parent_input_object_type => nil,
+          :default_used => false,
+          :value_is_null => false,
+          :value => SomeArgumentValue.new,
         }]
 
         assert_equal_with_diff_on_failure(expected_arguments, actual_arguments)
@@ -1160,13 +1188,33 @@ module GraphQL
           :default_used => true,
           :value_is_null => false,
           :value => SomeArgumentValue.new,
+        },
+        {
+          :argument_name => "subject",
+          :argument_type_name => "PostSubject",
+          :parent_field_name => "post",
+          :parent_field_type_name => "QueryRoot",
+          :parent_input_object_type => nil,
+          :default_used => false,
+          :value_is_null => false,
+          :value => SomeArgumentValue.new,
+        }]
+      end
+
+      def kitchen_sink_expected_deprecated_enum_values
+        [{
+          :argument_name=>"subject",
+          :argument_type_name=>"PostSubject",
+          :default_used=>false,
+          :deprecated=>true,
+          :value=>"RANDOM"
         }]
       end
 
       def kitchen_sink_query_document
         <<~GRAPHQL
           query PostDetails($postId: ID!, $titleUpcase: Boolean = false, $commentsTags: [String!] = null) {
-            post(id: $postId) {
+            post(id: $postId, subject: RANDOM) {
               __typename # Ignored
               id
               title(upcase: $titleUpcase)

@@ -100,6 +100,7 @@ module GraphQL
             extract_arguments(arg_val, field_defn, parent_input_object)
           end
         when ::GraphQL::Query::Arguments::ArgumentValue
+          extract_enum_value(argument, field_defn)
           extract_argument(argument, field_defn, parent_input_object)
           extract_arguments(argument.value, field_defn, parent_input_object)
         when ::GraphQL::Schema::InputObject
@@ -108,6 +109,9 @@ module GraphQL
 
           extract_arguments(input_object_argument_values, field_defn, parent_input_object)
         end
+      # rescue => e
+      #   binding.pry
+      #   puts
       end
 
       def extract_argument(value, field_defn, parent_input_object = nil)
@@ -123,6 +127,32 @@ module GraphQL
         }
 
         argument_extracted(static_metrics)
+      # rescue => e
+      #   binding.pry
+      #   puts
+      end
+
+      def extract_enum_value(value, field_defn)
+        return unless (unwrapped_type = value.definition.type.unwrap)
+        return unless unwrapped_type.is_a?(GraphQL::EnumType)
+
+        enum_value = value.value
+        value_definition = unwrapped_type.values[enum_value]
+
+        binding.pry if value_definition.nil?
+
+        static_metrics = {
+          argument_name: value.definition.expose_as,
+          argument_type_name: unwrapped_type.to_s,
+          default_used: value.default_used?,
+          deprecated: value_definition.deprecation_reason.present?,
+          value: enum_value,
+        }
+
+        enum_value_extracted(static_metrics)
+      # rescue => e
+      #   binding.pry
+      #   puts
       end
     end
   end

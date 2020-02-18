@@ -108,6 +108,12 @@ class PostUpvote < GraphQL::Schema::Mutation
   end
 end
 
+class PostSubject < GraphQL::Schema::Enum
+  value "NEWS", "Very objective content"
+  value "OPINION", "Very subjective content"
+  value "RANDOM", "Random content", deprecation_reason: 'No longer supported'
+end
+
 class MutationRoot < GraphQL::Schema::Object
   field :post_create, mutation: PostCreate
   field :post_update, mutation: PostUpdate
@@ -121,9 +127,10 @@ class QueryRoot < GraphQL::Schema::Object
   field :post, Post, null: true do
     argument :id, ID, required: true
     argument :locale, String, required: false, default_value: 'en-us'
+    argument :subject, PostSubject, required: false, default_value: nil
   end
 
-  def post(id:, locale:)
+  def post(id:, locale:, subject:)
     return if id == 'missing_post'
 
     { id: 1, title: "Hello, world!", body: "... you're still here?" }
