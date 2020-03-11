@@ -15,12 +15,12 @@ gem 'graphql-metrics'
 
 You can require it with in your code as needed with:
 ```ruby
-require 'graphql_metrics'
+require 'graphql/metrics'
 ```
 
 Or globally in the Gemfile with:
 ```ruby
-gem 'graphql-metrics', require: 'graphql_metrics'
+gem 'graphql-metrics', require: 'graphql/metrics'
 ```
 
 And then execute:
