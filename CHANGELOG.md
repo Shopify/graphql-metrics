@@ -1,3 +1,8 @@
+3.0.1
+-----
+
+Expand the range of graphql-ruby versions this gem is compatible with.
+
 3.0.0
 -----
 
