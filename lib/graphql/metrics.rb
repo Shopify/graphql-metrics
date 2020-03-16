@@ -48,6 +48,21 @@ module GraphQL
       TimedResult.new(*args) { yield }
     end
 
+    class GraphQLGemVersion
+      def initialize(version_string)
+        # TODO use Gem::Version.new('0.10.1') instead?
+        @version_string = version_string.split('.').map(&:to_i)
+      end
+
+      def is_1_9?
+        @version_string[0] == 1 && @version_string[1] == 9
+      end
+
+      def is_1_10?
+        @version_string[0] == 1 && @version_string[1] == 10
+      end
+    end
+
     class TimedResult
       # NOTE: `time_since_offset` is used to produce start times timed phases of execution (validation, field
       # resolution). These start times are relative to the executed operation's start time, which is captured at the

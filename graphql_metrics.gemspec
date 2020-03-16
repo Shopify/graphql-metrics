@@ -31,7 +31,9 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.add_runtime_dependency "concurrent-ruby", "~> 1.1.0"
-  spec.add_runtime_dependency "graphql", "> 1.9.5", "< 2"
+  # spec.add_runtime_dependency "graphql", "> 1.9.5", "< 2"
+  spec.add_runtime_dependency "graphql", "1.10.0"
+  # spec.add_runtime_dependency "graphql", "1.9.5"
 
   spec.add_development_dependency "bundler", "~> 2.1.4"
   spec.add_development_dependency "rake", "~> 10.0"

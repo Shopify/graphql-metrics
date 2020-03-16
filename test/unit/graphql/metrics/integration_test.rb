@@ -90,6 +90,7 @@ module GraphQL
         end
       end
 
+      focus
       test 'extracts metrics from queries, as well as their fields and arguments' do
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,

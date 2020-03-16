@@ -14,6 +14,8 @@ module GraphQL
 
         @static_query_metrics = nil
         @static_field_metrics = []
+
+        @graphql_gem_version = GraphQLGemVersion.new(GraphQL::VERSION)
       end
 
       def analyze?
@@ -32,12 +34,35 @@ module GraphQL
       end
 
       def on_leave_field(node, _parent, visitor)
-        return if visitor.field_definition.introspection?
+        if @graphql_gem_version.is_1_9?
+          return if visitor.field_definition.introspection?
+        else
+          return if visitor.field_definition.type.unwrap.introspection?
+        end
+
         return if query.context[SKIP_FIELD_AND_ARGUMENT_METRICS]
 
         # NOTE: @rmosolgo "I think it could be reduced to `arguments = visitor.arguments_for(ast_node)`"
         arguments = visitor.arguments_for(node, visitor.field_definition)
-        extract_arguments(arguments.argument_values.values, visitor.field_definition)
+        # Prior to 1.10.4 this returned an array of objects, potentially including
+        #  [GraphQL::Query::Arguments::ArgumentValue, ..., InputObject, Arguments]
+        #
+        # But as of 1.10.0, this returns a hash of symbol keys -> actual scalar argument values, rather than an array of
+        #  the kind of objects we handle in the current extract_arguments recursive method
+
+        argument_values = if @graphql_gem_version.is_1_9?
+          arguments.argument_values.values
+          argument_value_objects
+        else
+          # binding.pry if arguments != {}
+          {}
+        end
+
+        # Temporary
+        return if @graphql_gem_version.is_1_9? && argument_values == {}
+
+        # Recursively extract not just argument values, but argument / parent field definition data in `extract_argument`
+        extract_arguments(argument_values, visitor.field_definition)
 
         static_metrics = {
           field_name: node.name,
@@ -52,6 +77,9 @@ module GraphQL
         else
           field_extracted(static_metrics)
         end
+      rescue => e
+        binding.pry
+        puts
       end
 
       def extract_fields_with_runtime_metrics
