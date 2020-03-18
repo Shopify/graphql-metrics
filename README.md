@@ -172,9 +172,10 @@ class Schema < GraphQL::Schema
   use GraphQL::Execution::Interpreter # Required.
   use GraphQL::Analysis::AST # Required.
 
-  instrument :query, GraphQL::Metrics::Instrumentation.new
   query_analyzer SimpleAnalyzer
-  tracer GraphQL::Metrics::Tracer.new
+  
+  instrument :query, GraphQL::Metrics::Instrumentation.new # Both of these are required if either is used.
+  tracer GraphQL::Metrics::Tracer.new                      # <-- Note!
 
   use GraphQL::Batch # Optional, but highly recommended. See https://github.com/Shopify/graphql-batch/.
 end
