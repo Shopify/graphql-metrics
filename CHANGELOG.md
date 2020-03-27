@@ -1,3 +1,8 @@
+3.0.2
+-----
+
+- [#21](https://github.com/Shopify/graphql-metrics/pull/21) Optimize empty document check
+
 3.0.1
 -----
 
