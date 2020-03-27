@@ -47,7 +47,9 @@ module GraphQL
       private
 
       def query_present_and_valid?(query)
-        query.valid? && query.document.to_query_string.present?
+        # Check for selected_operation as well for graphql 1.9 compatibility
+        # which did not reject "empty" documents in its parser.
+        query.valid? && !query.selected_operation.nil?
       end
     end
   end
