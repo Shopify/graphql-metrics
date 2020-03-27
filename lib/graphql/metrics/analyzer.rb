@@ -61,14 +61,12 @@ module GraphQL
 
         @static_field_metrics.each do |static_metrics|
           resolver_timings = ns[GraphQL::Metrics::INLINE_FIELD_TIMINGS][static_metrics[:path]]
-          lazy_field_timings = ns[GraphQL::Metrics::LAZY_FIELD_TIMINGS][static_metrics[:path]]
+          lazy_resolver_timings = ns[GraphQL::Metrics::LAZY_FIELD_TIMINGS][static_metrics[:path]]
 
-          metrics = static_metrics.merge(
-            resolver_timings: resolver_timings || [],
-            lazy_resolver_timings: lazy_field_timings || [],
-          )
+          static_metrics[:resolver_timings] = resolver_timings || []
+          static_metrics[:lazy_resolver_timings] = lazy_resolver_timings || []
 
-          field_extracted(metrics)
+          field_extracted(static_metrics)
         end
       end
 
