@@ -1,3 +1,8 @@
+3.0.3
+-----
+
+- [#22](https://github.com/Shopify/graphql-metrics/pull/22) Optimization: use hash assignment over merge
+
 3.0.2
 -----
 
