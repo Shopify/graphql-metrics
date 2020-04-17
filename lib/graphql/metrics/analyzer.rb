@@ -32,10 +32,10 @@ module GraphQL
       end
 
       def on_leave_field(node, _parent, visitor)
-        return if visitor.field_definition.graphql_definition.introspection?
+        return if visitor.field_definition.introspection?
         return if query.context[SKIP_FIELD_AND_ARGUMENT_METRICS]
 
-        argument_values = query.arguments_for(node, visitor.field_definition, detailed: true)
+        argument_values = query.arguments_for(node, visitor.field_definition)
 
         extract_arguments(argument_values, visitor.field_definition)
 
@@ -97,7 +97,7 @@ module GraphQL
           argument.each_value do |arg_val|
             extract_arguments(arg_val, field_defn, parent_input_object)
           end
-        when ::GraphQL::Execution::Interpreter::Arguments::ArgumentValue
+        when ::GraphQL::Execution::Interpreter::ArgumentValue
           extract_argument(argument, field_defn, parent_input_object)
           extract_arguments(argument.value, field_defn, parent_input_object)
         when ::GraphQL::Schema::InputObject

@@ -29,7 +29,7 @@ module GraphQL
         include Comparable
 
         def <=>(other)
-          other.is_a?(GraphQL::Execution::Interpreter::Arguments::ArgumentValue) ? 0 : nil
+          other.is_a?(GraphQL::Execution::Interpreter::ArgumentValue) ? 0 : nil
         end
 
         def to_s

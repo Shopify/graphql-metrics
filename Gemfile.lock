@@ -1,16 +1,9 @@
-GIT
-  remote: https://github.com/rmosolgo/graphql-ruby
-  revision: a5f2744307710dc560ac8e59cba1520a215aa52f
-  branch: query-args-default-values
-  specs:
-    graphql (1.10.6)
-
 PATH
   remote: .
   specs:
     graphql-metrics (4.0.0)
       concurrent-ruby (~> 1.1.0)
-      graphql (>= 1.10.6, < 1.11.0)
+      graphql (>= 1.10.8)
 
 GEM
   remote: https://rubygems.org/
@@ -26,6 +19,7 @@ GEM
     diffy (3.3.0)
     fakeredis (0.7.0)
       redis (>= 3.2, < 5.0)
+    graphql (1.10.8)
     graphql-batch (0.4.2)
       graphql (>= 1.3, < 2)
       promise.rb (~> 0.7.2)
@@ -59,7 +53,6 @@ DEPENDENCIES
   activesupport (~> 5.1.5)
   diffy
   fakeredis
-  graphql!
   graphql-batch
   graphql-metrics!
   hashdiff
