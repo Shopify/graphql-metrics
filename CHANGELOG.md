@@ -1,3 +1,7 @@
+4.0.0
+-----
+- [23](https://github.com/Shopify/graphql-metrics/pull/23) graphql-ruby 1.10.8+ compatibility
+
 3.0.3
 -----
 
