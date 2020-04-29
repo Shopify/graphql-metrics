@@ -35,14 +35,14 @@ module GraphQL
         return if visitor.field_definition.introspection?
         return if query.context[SKIP_FIELD_AND_ARGUMENT_METRICS]
 
-        # NOTE: @rmosolgo "I think it could be reduced to `arguments = visitor.arguments_for(ast_node)`"
-        arguments = visitor.arguments_for(node, visitor.field_definition)
-        extract_arguments(arguments.argument_values.values, visitor.field_definition)
+        argument_values = query.arguments_for(node, visitor.field_definition)
+
+        extract_arguments(argument_values, visitor.field_definition)
 
         static_metrics = {
           field_name: node.name,
-          return_type_name: visitor.type_definition.name,
-          parent_type_name: visitor.parent_type_definition.name,
+          return_type_name: visitor.type_definition.graphql_name,
+          parent_type_name: visitor.parent_type_definition.graphql_name,
           deprecated: visitor.field_definition.deprecation_reason.present?,
           path: visitor.response_path,
         }
@@ -93,16 +93,16 @@ module GraphQL
           argument.each_value do |a|
             extract_arguments(a, field_defn, parent_input_object)
           end
-        when ::GraphQL::Query::Arguments
+        when ::GraphQL::Execution::Interpreter::Arguments
           argument.each_value do |arg_val|
             extract_arguments(arg_val, field_defn, parent_input_object)
           end
-        when ::GraphQL::Query::Arguments::ArgumentValue
+        when ::GraphQL::Execution::Interpreter::ArgumentValue
           extract_argument(argument, field_defn, parent_input_object)
           extract_arguments(argument.value, field_defn, parent_input_object)
         when ::GraphQL::Schema::InputObject
           input_object_argument_values = argument.arguments.argument_values.values
-          parent_input_object = input_object_argument_values.first&.definition&.metadata&.fetch(:type_class, nil)&.owner
+          parent_input_object = input_object_argument_values.first&.definition&.owner
 
           extract_arguments(input_object_argument_values, field_defn, parent_input_object)
         end
@@ -110,10 +110,10 @@ module GraphQL
 
       def extract_argument(value, field_defn, parent_input_object = nil)
         static_metrics = {
-          argument_name: value.definition.expose_as,
-          argument_type_name: value.definition.type.unwrap.to_s,
-          parent_field_name: field_defn.name,
-          parent_field_type_name: field_defn.metadata[:type_class].owner.graphql_name,
+          argument_name: value.definition.graphql_name,
+          argument_type_name: value.definition.type.unwrap.graphql_name,
+          parent_field_name: field_defn.graphql_name,
+          parent_field_type_name: field_defn.owner.graphql_name,
           parent_input_object_type: parent_input_object&.graphql_name,
           default_used: value.default_used?,
           value_is_null: value.value.nil?,
