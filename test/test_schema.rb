@@ -38,7 +38,13 @@ class Post < GraphQL::Schema::Object
   field :id, ID, null: false
 
   field :title, String, null: false do
-    argument :upcase, Boolean, required: false
+    argument :upcase, Boolean, required: false, prepare: ->(value, ctx) do
+      if ctx[:raise_in_prepare]
+        raise GraphQL::ExecutionError, "error in prepare"
+      else
+        value
+      end
+    end
   end
 
   field :body, String, null: false do

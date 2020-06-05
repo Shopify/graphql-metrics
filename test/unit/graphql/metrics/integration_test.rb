@@ -219,6 +219,28 @@ module GraphQL
         assert_equal_with_diff_on_failure(kitchen_sink_expected_arguments, kitchen_sink_query_metrics[:arguments])
       end
 
+      test "safely skips logging arguments metrics for fields, when the argument value look up fails (possibly because it failed input coercion)" do
+        query = GraphQL::Query.new(
+          SchemaWithFullMetrics,
+          kitchen_sink_query_document,
+          variables: { 'postId': '1', 'titleUpcase': true },
+          operation_name: 'PostDetails',
+          context: { raise_in_prepare: true }
+        )
+
+        result = query.result.to_h
+
+        metrics_results = query.context.namespace(SimpleAnalyzer::ANALYZER_NAMESPACE)[:simple_extractor_results]
+
+        actual_queries = metrics_results[:queries]
+        actual_fields = metrics_results[:fields]
+        actual_arguments = metrics_results[:arguments]
+
+        assert_equal 1, actual_queries.size
+        assert actual_fields.size > 1
+        assert_equal 8, actual_arguments.size
+      end
+
       test 'skips logging for fields and arguments if `skip_field_and_argument_metrics: true` in context' do
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,
