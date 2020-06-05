@@ -1,3 +1,8 @@
+4.0.1
+-----
+- [24](https://github.com/Shopify/graphql-metrics/pull/24) Safely call `arguments_for` to handle arguments which may
+raise `ExecutionError`s in their `prepare` methods.
+
 4.0.0
 -----
 - [23](https://github.com/Shopify/graphql-metrics/pull/23) graphql-ruby 1.10.8+ compatibility
