@@ -35,9 +35,16 @@ module GraphQL
         return if visitor.field_definition.introspection?
         return if query.context[SKIP_FIELD_AND_ARGUMENT_METRICS]
 
-        argument_values = query.arguments_for(node, visitor.field_definition)
+        # Arguments can raise execution errors within their `prepare` methods
+        # which aren't properly handled during analysis so we have to handle
+        # them ourselves safely and return `nil`.
+        argument_values = begin
+          query.arguments_for(node, visitor.field_definition)
+        rescue ::GraphQL::ExecutionError
+          nil
+        end
 
-        extract_arguments(argument_values, visitor.field_definition)
+        extract_arguments(argument_values, visitor.field_definition) if argument_values
 
         static_metrics = {
           field_name: node.name,
