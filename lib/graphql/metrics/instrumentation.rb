@@ -29,7 +29,7 @@ module GraphQL
 
         if runtime_metrics_interrupted?(ns)
           # If runtime metrics were interrupted, then it's most likely that the application raised an exception and that
-          # query parsing (which is instrumenetd by GraphQL::Metrics::Tracer) was abruptly stopped.
+          # query parsing (which is instrumented by GraphQL::Metrics::Tracer) was abruptly stopped.
           #
           # In this scenario, we still attempt to log whatever static query metrics we've collected, with runtime
           # metrics (like query, field resolver timings) excluded.
@@ -63,7 +63,7 @@ module GraphQL
       def runtime_metrics_interrupted?(context_namespace)
         # NOTE: The start time stored at `ns[GraphQL::Metrics::QUERY_START_TIME_MONOTONIC]` is captured during query
         # parsing, which occurs before `Instrumentation#before_query`.
-        context_namespace[GraphQL::Metrics::QUERY_START_TIME_MONOTONIC].nil?
+        context_namespace.key?(GraphQL::Metrics::QUERY_START_TIME_MONOTONIC) == false
       end
     end
   end
