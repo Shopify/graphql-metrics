@@ -25,23 +25,31 @@ module GraphQL
         return if query.context[GraphQL::Metrics::SKIP_GRAPHQL_METRICS_ANALYSIS]
 
         ns = query.context.namespace(CONTEXT_NAMESPACE)
-
-        # NOTE: The start time stored at `ns[GraphQL::Metrics::QUERY_START_TIME_MONOTONIC]` is captured during query
-        # parsing, which occurs before `Instrumentation#before_query`.
-        query_duration = GraphQL::Metrics.current_time_monotonic - ns[GraphQL::Metrics::QUERY_START_TIME_MONOTONIC]
-
-        runtime_query_metrics = {
-          query_start_time: ns[GraphQL::Metrics::QUERY_START_TIME],
-          query_duration: query_duration,
-          parsing_start_time_offset: ns[GraphQL::Metrics::PARSING_START_TIME_OFFSET],
-          parsing_duration: ns[GraphQL::Metrics::PARSING_DURATION],
-          validation_start_time_offset: ns[GraphQL::Metrics::VALIDATION_START_TIME_OFFSET],
-          validation_duration: ns[GraphQL::Metrics::VALIDATION_DURATION],
-        }
-
         analyzer = ns[GraphQL::Metrics::ANALYZER_INSTANCE_KEY]
-        analyzer.extract_fields_with_runtime_metrics
-        analyzer.extract_query(runtime_query_metrics: runtime_query_metrics)
+
+        if runtime_metrics_interrupted?(ns)
+          # If runtime metrics were interrupted, then it's most likely that the application raised an exception and that
+          # query parsing (which is instrumenetd by GraphQL::Metrics::Tracer) was abruptly stopped.
+          #
+          # In this scenario, we still attempt to log whatever static query metrics we've collected, with runtime
+          # metrics (like query, field resolver timings) excluded.
+          analyzer.extract_fields(with_runtime_metrics: false)
+          analyzer.extract_query
+        else
+          query_duration = GraphQL::Metrics.current_time_monotonic - ns[GraphQL::Metrics::QUERY_START_TIME_MONOTONIC]
+
+          runtime_query_metrics = {
+            query_start_time: ns[GraphQL::Metrics::QUERY_START_TIME],
+            query_duration: query_duration,
+            parsing_start_time_offset: ns[GraphQL::Metrics::PARSING_START_TIME_OFFSET],
+            parsing_duration: ns[GraphQL::Metrics::PARSING_DURATION],
+            validation_start_time_offset: ns[GraphQL::Metrics::VALIDATION_START_TIME_OFFSET],
+            validation_duration: ns[GraphQL::Metrics::VALIDATION_DURATION],
+          }
+
+          analyzer.extract_fields
+          analyzer.extract_query(runtime_query_metrics: runtime_query_metrics)
+        end
       end
 
       private
@@ -50,6 +58,12 @@ module GraphQL
         # Check for selected_operation as well for graphql 1.9 compatibility
         # which did not reject "empty" documents in its parser.
         query.valid? && !query.selected_operation.nil?
+      end
+
+      def runtime_metrics_interrupted?(context_namespace)
+        # NOTE: The start time stored at `ns[GraphQL::Metrics::QUERY_START_TIME_MONOTONIC]` is captured during query
+        # parsing, which occurs before `Instrumentation#before_query`.
+        context_namespace[GraphQL::Metrics::QUERY_START_TIME_MONOTONIC].nil?
       end
     end
   end

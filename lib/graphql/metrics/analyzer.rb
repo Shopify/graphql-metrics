@@ -61,17 +61,20 @@ module GraphQL
         end
       end
 
-      def extract_fields_with_runtime_metrics
+      def extract_fields(with_runtime_metrics: true)
         return if query.context[SKIP_FIELD_AND_ARGUMENT_METRICS]
 
         ns = query.context.namespace(CONTEXT_NAMESPACE)
 
         @static_field_metrics.each do |static_metrics|
-          resolver_timings = ns[GraphQL::Metrics::INLINE_FIELD_TIMINGS][static_metrics[:path]]
-          lazy_resolver_timings = ns[GraphQL::Metrics::LAZY_FIELD_TIMINGS][static_metrics[:path]]
 
-          static_metrics[:resolver_timings] = resolver_timings || []
-          static_metrics[:lazy_resolver_timings] = lazy_resolver_timings || []
+          if with_runtime_metrics
+            resolver_timings = ns[GraphQL::Metrics::INLINE_FIELD_TIMINGS][static_metrics[:path]]
+            lazy_resolver_timings = ns[GraphQL::Metrics::LAZY_FIELD_TIMINGS][static_metrics[:path]]
+
+            static_metrics[:resolver_timings] = resolver_timings || []
+            static_metrics[:lazy_resolver_timings] = lazy_resolver_timings || []
+          end
 
           field_extracted(static_metrics)
         end
