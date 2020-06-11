@@ -1,3 +1,7 @@
+4.0.2
+-----
+- [25](https://github.com/Shopify/graphql-metrics/pull/25) Safely handle interrupted runtime metrics.
+
 4.0.1
 -----
 - [24](https://github.com/Shopify/graphql-metrics/pull/24) Safely call `arguments_for` to handle arguments which may
