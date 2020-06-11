@@ -241,6 +241,40 @@ module GraphQL
         assert_equal 8, actual_arguments.size
       end
 
+      test "safely returns static metrics if runtime metrics gathering is interrupted" do
+        query = GraphQL::Query.new(
+          SchemaWithFullMetrics,
+          kitchen_sink_query_document,
+          variables: { 'postId': '1', 'titleUpcase': true },
+          operation_name: 'PostDetails'
+        )
+
+        GraphQL::Metrics::Instrumentation.any_instance.expects(:runtime_metrics_interrupted?).returns(true)
+
+        result = query.result.to_h
+
+        metrics_results = query.context.namespace(SimpleAnalyzer::ANALYZER_NAMESPACE)[:simple_extractor_results]
+
+        actual_queries = metrics_results[:queries]
+        actual_fields = metrics_results[:fields]
+        actual_arguments = metrics_results[:arguments]
+
+        expected_query_metrics = [{:operation_type=>"query", :operation_name=>"PostDetails"}]
+        assert_equal expected_query_metrics, actual_queries
+
+        assert actual_fields.size > 1
+
+        expected_field_metric = {
+          :field_name=>"id",
+          :return_type_name=>"ID",
+          :parent_type_name=>"Post",
+          :deprecated=>false,
+          :path=>["post", "id"] # NOTE that `resolver_timings` and `lazy_resolver_timings` are omitted.
+        }
+        assert actual_fields.include?(expected_field_metric)
+        assert_equal 9, actual_arguments.size
+      end
+
       test 'skips logging for fields and arguments if `skip_field_and_argument_metrics: true` in context' do
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,
