@@ -50,7 +50,7 @@ module GraphQL
           field_name: node.name,
           return_type_name: visitor.type_definition.graphql_name,
           parent_type_name: visitor.parent_type_definition.graphql_name,
-          deprecated: visitor.field_definition.deprecation_reason.present?,
+          deprecated: !visitor.field_definition.deprecation_reason.nil?,
           path: visitor.response_path,
         }
 
