@@ -54,8 +54,8 @@ parsing and validation runtime metrics will not be added to the `metrics` hash.
 ### Define your own analyzer subclass
 
 ```ruby
-  class CaptureAllMetricsAnalyzer < GraphQL::Metrics::Analyzer
-    ANALYZER_NAMESPACE = :capture_all_metrics_analyzer_namespace
+  class SimpleAnalyzer < GraphQL::Metrics::Analyzer
+    ANALYZER_NAMESPACE = :simple_analyzer_namespace
 
     def initialize(query_or_multiplex)
       super
