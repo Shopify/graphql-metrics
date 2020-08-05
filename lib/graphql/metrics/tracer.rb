@@ -6,7 +6,8 @@ module GraphQL
       # NOTE: These constants come from the graphql ruby gem.
       GRAPHQL_GEM_LEXING_KEY = 'lex'
       GRAPHQL_GEM_PARSING_KEY = 'parse'
-      GRAPHQL_GEM_VALIDATION_KEYS = ['validate', 'analyze_query']
+      GRAPHQL_GEM_VALIDATION_KEY = 'validate'
+      GRAPHQL_GEM_ANALYZE_KEY = 'analyze_query'
       GRAPHQL_GEM_TRACING_FIELD_KEYS = [
         GRAPHQL_GEM_TRACING_FIELD_KEY = 'execute_field',
         GRAPHQL_GEM_TRACING_LAZY_FIELD_KEY = 'execute_field_lazy'
@@ -26,11 +27,12 @@ module GraphQL
           return setup_tracing_before_lexing(&block)
         when GRAPHQL_GEM_PARSING_KEY
           return capture_parsing_time(&block)
-        when *GRAPHQL_GEM_VALIDATION_KEYS
+        when GRAPHQL_GEM_VALIDATION_KEY
           context = possible_context
-
-          return yield unless context.query.valid?
           return capture_validation_time(context, &block)
+        when GRAPHQL_GEM_ANALYZE_KEY
+          context = possible_context
+          return capture_analysis_time(context, &block)
         when *GRAPHQL_GEM_TRACING_FIELD_KEYS
           return yield if data[:query].context[SKIP_FIELD_AND_ARGUMENT_METRICS]
           return yield unless GraphQL::Metrics.timings_capture_enabled?(data[:query].context)
@@ -85,14 +87,24 @@ module GraphQL
         timed_result = GraphQL::Metrics.time(pre_context.value.query_start_time_monotonic) { yield }
 
         ns = context.namespace(CONTEXT_NAMESPACE)
-        previous_validation_duration = ns[GraphQL::Metrics::VALIDATION_DURATION] || 0
 
         ns[QUERY_START_TIME] = pre_context.value.query_start_time
         ns[QUERY_START_TIME_MONOTONIC] = pre_context.value.query_start_time_monotonic
         ns[PARSING_START_TIME_OFFSET] = pre_context.value.parsing_start_time_offset
         ns[PARSING_DURATION] = pre_context.value.parsing_duration
         ns[VALIDATION_START_TIME_OFFSET] = timed_result.time_since_offset
-        ns[VALIDATION_DURATION] = timed_result.duration + previous_validation_duration
+        ns[VALIDATION_DURATION] = timed_result.duration
+
+        timed_result.result
+      end
+
+      def capture_analysis_time(context)
+        ns = context.namespace(CONTEXT_NAMESPACE)
+
+        timed_result = GraphQL::Metrics.time(ns[QUERY_START_TIME_MONOTONIC]) { yield }
+
+        ns[ANALYSIS_START_TIME_OFFSET] = timed_result.time_since_offset
+        ns[ANALYSIS_DURATION] = timed_result.duration
 
         timed_result.result
       end

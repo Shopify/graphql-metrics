@@ -28,6 +28,8 @@ module GraphQL
     PARSING_DURATION = :parsing_duration
     VALIDATION_START_TIME_OFFSET = :validation_start_time_offset
     VALIDATION_DURATION = :validation_duration
+    ANALYSIS_START_TIME_OFFSET = :analysis_start_time_offset
+    ANALYSIS_DURATION = :analysis_duration
     INLINE_FIELD_TIMINGS = :inline_field_timings
     LAZY_FIELD_TIMINGS = :lazy_field_timings
 
