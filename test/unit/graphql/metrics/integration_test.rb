@@ -166,6 +166,8 @@ module GraphQL
             :parsing_duration=>SomeNumber.new(at_least: 0),
             :validation_start_time_offset=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
             :validation_duration=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+            :analysis_start_time_offset=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+            :analysis_duration=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
           }
         ]
         assert_equal_with_diff_on_failure(expected_queries, actual_queries)
@@ -212,6 +214,8 @@ module GraphQL
           :parsing_duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
           :validation_start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
           :validation_duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+          :analysis_start_time_offset=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+          :analysis_duration=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
         }]
 
         expected_other_query_fields = [{
@@ -586,6 +590,8 @@ module GraphQL
             :parsing_duration=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
             :validation_start_time_offset=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
             :validation_duration=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+            :analysis_start_time_offset=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+            :analysis_duration=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
           }
         ]
 
@@ -1004,6 +1010,8 @@ module GraphQL
             :parsing_duration=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
             :validation_start_time_offset=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
             :validation_duration=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+            :analysis_start_time_offset=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+            :analysis_duration=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
           }
         ]
       end
