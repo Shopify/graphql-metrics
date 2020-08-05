@@ -175,10 +175,10 @@ module GraphQL
         assert_equal_with_diff_on_failure(kitchen_sink_expected_arguments, actual_arguments)
       end
 
-      test 'extracts metrics in all of the same ways, when a multiplex is executed' do
+      test 'extracts metrics in all of the same ways, when a multiplex is executed - regardless if queries are pre-parsed or not' do
         queries = [
           {
-            query: 'query OtherQuery { post(id: "42") { id title } }',
+            document: GraphQL.parse('query OtherQuery { post(id: "42") { id title } }'),
             operation_name: 'OtherQuery',
           },
           {
@@ -209,9 +209,9 @@ module GraphQL
           :operation_type => "query",
           :operation_name => "OtherQuery",
           :query_start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
-          :query_duration => SomeNumber.new(at_least: 2),
-          :parsing_start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
-          :parsing_duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+          :query_duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+          :parsing_start_time_offset => SomeNumber.new(at_least: 0),
+          :parsing_duration => SomeNumber.new(at_least: 0),
           :validation_start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
           :validation_duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
           :analysis_start_time_offset=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
