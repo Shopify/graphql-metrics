@@ -38,14 +38,12 @@ module GraphQL
       end
 
       class SimpleAnalyzer < GraphQL::Metrics::Analyzer
-        ANALYZER_NAMESPACE = :simple_analyzer_namespace
-
         attr_reader :types_used, :context
 
         def initialize(query_or_multiplex)
           super
 
-          @context = query_or_multiplex.context.namespace(ANALYZER_NAMESPACE)
+          @context = query_or_multiplex.context
           @context[:simple_extractor_results] = {
             queries: [],
             fields: [],
@@ -68,7 +66,7 @@ module GraphQL
         private
 
         def store_metrics(context_key, metrics)
-          context[:simple_extractor_results][context_key] << metrics
+          @context[:simple_extractor_results][context_key] << metrics
         end
       end
 
@@ -90,25 +88,87 @@ module GraphQL
         end
       end
 
-      test 'extracts metrics from queries, as well as their fields and arguments' do
+      test 'extracts metrics from queries, as well as their fields and arguments (when using Query#result)' do
+        context = {}
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,
           kitchen_sink_query_document,
           variables: { 'postId': '1', 'titleUpcase': true },
           operation_name: 'PostDetails',
+          context: context
         )
         result = query.result.to_h
 
         refute result['errors'].present?
         assert result['data'].present?
 
-        results = query.context.namespace(SimpleAnalyzer::ANALYZER_NAMESPACE)[:simple_extractor_results]
+        results = context[:simple_extractor_results]
 
         actual_queries = results[:queries]
         actual_fields = results[:fields]
         actual_arguments = results[:arguments]
 
         assert_equal_with_diff_on_failure(kitchen_sink_expected_queries, actual_queries)
+        assert_equal_with_diff_on_failure(kitchen_sink_expected_fields, actual_fields)
+        assert_equal_with_diff_on_failure(kitchen_sink_expected_arguments, actual_arguments)
+      end
+
+      test 'extracts metrics from queries, as well as their fields and arguments (when using Query.execute)' do
+        context = {}
+        result = SchemaWithFullMetrics.execute(
+          kitchen_sink_query_document,
+          variables: { 'postId': '1', 'titleUpcase': true },
+          operation_name: 'PostDetails',
+          context: context
+        )
+
+        refute result['errors'].present?
+        assert result['data'].present?
+
+        results = context[:simple_extractor_results]
+
+        actual_queries = results[:queries]
+        actual_fields = results[:fields]
+        actual_arguments = results[:arguments]
+
+        assert_equal_with_diff_on_failure(kitchen_sink_expected_queries, actual_queries)
+        assert_equal_with_diff_on_failure(kitchen_sink_expected_fields, actual_fields)
+        assert_equal_with_diff_on_failure(kitchen_sink_expected_arguments, actual_arguments)
+      end
+
+      test 'extracts metrics from queries that have already been parsed, omitting parsing timings' do
+        context = {}
+        query = GraphQL::Query.new(
+          SchemaWithFullMetrics,
+          document: GraphQL.parse(kitchen_sink_query_document),
+          variables: { 'postId': '1', 'titleUpcase': true },
+          operation_name: 'PostDetails',
+          context: context
+        )
+        result = query.result.to_h
+
+        refute result['errors'].present?
+        assert result['data'].present?
+
+        results = context[:simple_extractor_results]
+
+        actual_queries = results[:queries]
+        actual_fields = results[:fields]
+        actual_arguments = results[:arguments]
+
+        expected_queries = [
+          {
+            :operation_type=>"query",
+            :operation_name=>"PostDetails",
+            :query_start_time=>SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+            :query_duration=>SomeNumber.new(at_least: 2),
+            :parsing_start_time_offset=>SomeNumber.new(at_least: 0),
+            :parsing_duration=>SomeNumber.new(at_least: 0),
+            :validation_start_time_offset=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+            :validation_duration=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+          }
+        ]
+        assert_equal_with_diff_on_failure(expected_queries, actual_queries)
         assert_equal_with_diff_on_failure(kitchen_sink_expected_fields, actual_fields)
         assert_equal_with_diff_on_failure(kitchen_sink_expected_arguments, actual_arguments)
       end
@@ -131,8 +191,7 @@ module GraphQL
         metrics_results = multiplex_results.map do |multiplex_result|
           metrics_result = multiplex_result
             .query
-            .context
-            .namespace(SimpleAnalyzer::ANALYZER_NAMESPACE)[:simple_extractor_results]
+            .context[:simple_extractor_results]
 
           {
             queries: metrics_result[:queries],
@@ -220,17 +279,18 @@ module GraphQL
       end
 
       test "safely skips logging arguments metrics for fields, when the argument value look up fails (possibly because it failed input coercion)" do
+        context = { raise_in_prepare: true }
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,
           kitchen_sink_query_document,
           variables: { 'postId': '1', 'titleUpcase': true },
           operation_name: 'PostDetails',
-          context: { raise_in_prepare: true }
+          context: context
         )
 
         result = query.result.to_h
 
-        metrics_results = query.context.namespace(SimpleAnalyzer::ANALYZER_NAMESPACE)[:simple_extractor_results]
+        metrics_results = context[:simple_extractor_results]
 
         actual_queries = metrics_results[:queries]
         actual_fields = metrics_results[:fields]
@@ -242,18 +302,20 @@ module GraphQL
       end
 
       test "safely returns static metrics if runtime metrics gathering is interrupted" do
+        context = {}
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,
           kitchen_sink_query_document,
           variables: { 'postId': '1', 'titleUpcase': true },
-          operation_name: 'PostDetails'
+          operation_name: 'PostDetails',
+          context: context
         )
 
         GraphQL::Metrics::Instrumentation.any_instance.expects(:runtime_metrics_interrupted?).returns(true)
 
         result = query.result.to_h
 
-        metrics_results = query.context.namespace(SimpleAnalyzer::ANALYZER_NAMESPACE)[:simple_extractor_results]
+        metrics_results = context[:simple_extractor_results]
 
         actual_queries = metrics_results[:queries]
         actual_fields = metrics_results[:fields]
@@ -276,21 +338,23 @@ module GraphQL
       end
 
       test 'skips logging for fields and arguments if `skip_field_and_argument_metrics: true` in context' do
+        context = {
+          GraphQL::Metrics::SKIP_FIELD_AND_ARGUMENT_METRICS => true,
+        }
+
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,
           kitchen_sink_query_document,
           variables: { 'postId': '1', 'titleUpcase': true },
           operation_name: 'PostDetails',
-          context: {
-            GraphQL::Metrics::SKIP_FIELD_AND_ARGUMENT_METRICS => true,
-          }
+          context: context
         )
         result = query.result.to_h
 
         refute result['errors'].present?
         assert result['data'].present?
 
-        results = query.context.namespace(SimpleAnalyzer::ANALYZER_NAMESPACE)[:simple_extractor_results]
+        results = context[:simple_extractor_results]
 
         actual_queries = results[:queries]
         actual_fields = results[:fields]
@@ -332,29 +396,32 @@ module GraphQL
       end
 
       test 'skips analysis, instrumentation and tracing if `skip_graphql_metrics_analysis` is set to true in the context' do
+        context = { skip_graphql_metrics_analysis: true }
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,
           kitchen_sink_query_document,
           variables: { 'postId': '1', 'titleUpcase': true },
           operation_name: 'PostDetails',
-          context: { skip_graphql_metrics_analysis: true }
+          context: context
         )
         result = query.result.to_h
 
         refute result['errors'].present?
         assert result['data'].present?
 
-        results = query.context.namespace(SimpleAnalyzer::ANALYZER_NAMESPACE)[:simple_extractor_results]
+        results = context[:simple_extractor_results]
 
         expected = {:queries=>[], :fields=>[], :arguments=>[]}
         assert_equal(expected, results)
       end
 
       test 'extracts metrics manually via analyze call, with args supplied inline' do
+        context = {}
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,
           mutation_document_inline_args,
           operation_name: 'PostCreate',
+          context: context
         )
 
         result = query.result.to_h
@@ -362,13 +429,14 @@ module GraphQL
         refute result['errors'].present?
         assert result['data'].present?
 
-        results = query.context.namespace(SimpleAnalyzer::ANALYZER_NAMESPACE)[:simple_extractor_results]
+        results = context[:simple_extractor_results]
         actual_arguments = results[:arguments]
 
         assert_equal_with_diff_on_failure(shared_expected_arguments_metrics, actual_arguments)
       end
 
       test 'extracts metrics manually via analyze call with args supplied by variables' do
+        context = {}
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,
           mutation_document,
@@ -385,6 +453,7 @@ module GraphQL
             }
           },
           operation_name: 'PostCreate',
+          context: context
         )
 
         result = query.result.to_h
@@ -392,23 +461,25 @@ module GraphQL
         refute result['errors'].present?
         assert result['data'].present?
 
-        results = query.context.namespace(SimpleAnalyzer::ANALYZER_NAMESPACE)[:simple_extractor_results]
+        results = context[:simple_extractor_results]
         actual_arguments = results[:arguments]
 
         assert_equal_with_diff_on_failure(shared_expected_arguments_metrics, actual_arguments)
       end
 
       test 'fields requested that are not resolved (e.g. id for a post that itself was never resolved) produce no inline field timings' do
+        context = {}
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,
           '{ post(id: "missing_post") { id } }',
+          context: context
         )
         result = query.result.to_h
 
         refute result['errors'].present?
         assert result['data'].present?
 
-        results = query.context.namespace(SimpleAnalyzer::ANALYZER_NAMESPACE)[:simple_extractor_results]
+        results = context[:simple_extractor_results]
 
         actual_fields = results[:fields]
         id_field_metric = actual_fields.find { |f| f[:path] == %w(post id) }
@@ -477,6 +548,7 @@ module GraphQL
       end
 
       test 'extracts metrics from mutations, input objects' do
+        context = {}
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,
           mutation_document,
@@ -491,13 +563,14 @@ module GraphQL
             }
           },
           operation_name: 'PostCreate',
+          context: context
         )
         result = query.result.to_h
 
         refute result['errors'].present?
         assert result['data'].present?
 
-        results = query.context.namespace(SimpleAnalyzer::ANALYZER_NAMESPACE)[:simple_extractor_results]
+        results = context[:simple_extractor_results]
 
         actual_queries = results[:queries]
         actual_fields = results[:fields]
@@ -628,18 +701,20 @@ module GraphQL
       end
 
       test 'works as simple analyzer, gathering static metrics with no runtime data when the analyzer is not used as instrumentation and or a tracer' do
+        context = {}
         query = GraphQL::Query.new(
           SchemaWithoutTimingMetrics,
           kitchen_sink_query_document,
           variables: { 'postId': '1', 'titleUpcase': true },
           operation_name: 'PostDetails',
+          context: context
         )
         result = query.result.to_h
 
         refute result['errors'].present?
         assert result['data'].present?
 
-        results = query.context.namespace(SimpleAnalyzer::ANALYZER_NAMESPACE)[:simple_extractor_results]
+        results = context[:simple_extractor_results]
 
         actual_queries = results[:queries]
         actual_fields = results[:fields]
@@ -837,12 +912,13 @@ module GraphQL
           }
         GRAPHQL
 
-        query = GraphQL::Query.new(SchemaWithFullMetrics, query_document)
+        context = {}
+        query = GraphQL::Query.new(SchemaWithFullMetrics, query_document, context: context)
         result = query.result.to_h
         refute result['errors'].present?
         assert result['data'].present?
 
-        metrics_results = query.context.namespace(SimpleAnalyzer::ANALYZER_NAMESPACE)[:simple_extractor_results]
+        metrics_results = context[:simple_extractor_results]
         actual_arguments = metrics_results[:arguments]
 
         expected_arguments = [
@@ -880,13 +956,14 @@ module GraphQL
           }
         GRAPHQL
 
-        query = GraphQL::Query.new(SchemaWithFullMetrics, query_document)
+        context = {}
+        query = GraphQL::Query.new(SchemaWithFullMetrics, query_document, context: context)
         result = query.result.to_h
 
         refute result['errors'].present?
         assert result['data'].present?
 
-        metrics_results = query.context.namespace(SimpleAnalyzer::ANALYZER_NAMESPACE)[:simple_extractor_results]
+        metrics_results = context[:simple_extractor_results]
         actual_arguments = metrics_results[:arguments]
 
         expected_arguments = [

@@ -75,6 +75,13 @@ module GraphQL
       end
 
       def capture_validation_time(context)
+        unless lexing_and_parsing_time_captured?
+          pre_context.value.query_start_time = GraphQL::Metrics.current_time
+          pre_context.value.query_start_time_monotonic = GraphQL::Metrics.current_time_monotonic
+          pre_context.value.parsing_start_time_offset = 0
+          pre_context.value.parsing_duration = 0
+        end
+
         timed_result = GraphQL::Metrics.time(pre_context.value.query_start_time_monotonic) { yield }
 
         ns = context.namespace(CONTEXT_NAMESPACE)
@@ -88,6 +95,13 @@ module GraphQL
         ns[VALIDATION_DURATION] = timed_result.duration + previous_validation_duration
 
         timed_result.result
+      end
+
+      def lexing_and_parsing_time_captured?
+        pre_context.value.query_start_time &&
+          pre_context.value.query_start_time_monotonic &&
+          pre_context.value.parsing_start_time_offset &&
+          pre_context.value.parsing_duration
       end
 
       def trace_field(context_key, data)
