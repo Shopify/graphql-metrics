@@ -1,3 +1,7 @@
+4.0.4
+-----
+- [33](https://github.com/Shopify/graphql-metrics/pull/33) Setup tracing using lex or execute_multiplex tracer events.
+
 4.0.3
 -----
 - [32](https://github.com/Shopify/graphql-metrics/pull/32) Split validate and analyze_query tracer events (encompasses #30).

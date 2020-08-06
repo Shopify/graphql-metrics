@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    graphql-metrics (4.0.3)
+    graphql-metrics (4.0.4)
       concurrent-ruby (~> 1.1.0)
       graphql (>= 1.10.8)
 
