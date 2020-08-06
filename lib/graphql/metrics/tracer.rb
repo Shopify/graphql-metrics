@@ -4,6 +4,7 @@ module GraphQL
   module Metrics
     class Tracer
       # NOTE: These constants come from the graphql ruby gem.
+      GRAPHQL_GEM_LEX_KEY = 'lex'
       GRAPHQL_GEM_EXECUTE_MULTIPLEX_KEY = 'execute_multiplex'
       GRAPHQL_GEM_PARSING_KEY = 'parse'
       GRAPHQL_GEM_VALIDATION_KEY = 'validate'
@@ -23,6 +24,8 @@ module GraphQL
         # NOTE: Not all tracing events are handled here, but those that are are handled in this case statement in
         # chronological order.
         case key
+        when GRAPHQL_GEM_LEX_KEY
+          return setup_tracing(&block)
         when GRAPHQL_GEM_EXECUTE_MULTIPLEX_KEY
           return setup_tracing(&block)
         when GRAPHQL_GEM_PARSING_KEY
@@ -73,6 +76,8 @@ module GraphQL
       end
 
       def setup_tracing
+        return yield if pre_context.query_start_time
+
         pre_context.query_start_time = GraphQL::Metrics.current_time
         pre_context.query_start_time_monotonic = GraphQL::Metrics.current_time_monotonic
 
