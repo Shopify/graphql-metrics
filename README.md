@@ -78,6 +78,8 @@ parsing and validation runtime metrics will not be added to the `metrics` hash.
     #   parsing_duration: 0.0008190000080503523,
     #   validation_start_time_offset: 0.0030819999519735575,
     #   validation_duration: 0.01704599999357015,
+    #   analysis_start_time_offset: 0.0010339999571442604,
+    #   analysis_duration: 0.0008190000080503523,
     # }
     #
     # You can use these metrics to track high-level query performance, along with any other details you wish to
@@ -221,10 +223,11 @@ your application as intended, here's a breakdown of the order of execution of th
 
  When used as instrumentation, an analyzer and tracing, the order of execution is:
 
-* Tracer.setup_tracing_before_lexing
+* Tracer.setup_tracing
 * Tracer.capture_parsing_time
 * Instrumentation.before_query (context setup)
-* Tracer.capture_validation_time (twice, once for `analyze_query`, then `analyze_multiplex`)
+* Tracer.capture_validation_time
+* Tracer.capture_analysis_time
 * Analyzer#initialize (bit more context setup, instance vars setup)
 * Analyzer#result
 * Tracer.trace_field (n times)

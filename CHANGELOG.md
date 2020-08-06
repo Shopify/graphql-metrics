@@ -1,3 +1,9 @@
+4.0.3
+-----
+- [32](https://github.com/Shopify/graphql-metrics/pull/32) Split validate and analyze_query tracer events (encompasses #30).
+- [30](https://github.com/Shopify/graphql-metrics/pull/30) Handle queries that have already been parsed (thank you @jturkel).
+- [29](https://github.com/Shopify/graphql-metrics/pull/29) Remove runtime dependency on activesupport (thank you @jturkel).
+
 4.0.2
 -----
 - [25](https://github.com/Shopify/graphql-metrics/pull/25) Safely handle interrupted runtime metrics.
