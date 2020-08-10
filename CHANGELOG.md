@@ -1,3 +1,7 @@
+4.0.5
+-----
+- [34] Fix default of pre-parsed query `parsing_duration` to be Float (`0.0`) rather than Integer (`0`).
+
 4.0.4
 -----
 - [33](https://github.com/Shopify/graphql-metrics/pull/33) Setup tracing using lex or execute_multiplex tracer events.
