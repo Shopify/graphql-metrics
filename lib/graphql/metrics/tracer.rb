@@ -95,8 +95,8 @@ module GraphQL
 
       def capture_validation_time(context)
         if pre_context.parsing_duration.nil?
-          pre_context.parsing_start_time_offset = 0
-          pre_context.parsing_duration = 0
+          pre_context.parsing_start_time_offset = 0.0
+          pre_context.parsing_duration = 0.0
         end
 
         timed_result = GraphQL::Metrics.time(pre_context.query_start_time_monotonic) { yield }
