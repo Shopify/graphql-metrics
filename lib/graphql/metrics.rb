@@ -22,6 +22,8 @@ module GraphQL
     ANALYZER_INSTANCE_KEY = :analyzer_instance
 
     # Context keys to store timings for query phases of execution, field resolver timings.
+    MULTIPLEX_START_TIME = :multiplex_start_time
+    MULTIPLEX_START_TIME_MONOTONIC = :multiplex_start_time_monotonic
     QUERY_START_TIME = :query_start_time
     QUERY_START_TIME_MONOTONIC = :query_start_time_monotonic
     PARSING_START_TIME_OFFSET = :parsing_start_time_offset
