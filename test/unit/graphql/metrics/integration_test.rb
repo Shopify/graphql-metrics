@@ -200,6 +200,30 @@ module GraphQL
         assert_equal_with_diff_on_failure(kitchen_sink_expected_arguments, actual_arguments)
       end
 
+      test 'GraphQL::Querys executed in the same thread have increasing `multiplex_start_time`s (regression test; see below)' do
+        multiplex_start_times = 2.times.map do
+          context = {}
+          query = GraphQL::Query.new(
+            SchemaWithFullMetrics,
+            kitchen_sink_query_document,
+            variables: { 'postId': '1', 'titleUpcase': true },
+            operation_name: 'PostDetails',
+            context: context
+          )
+          result = query.result.to_h
+
+          results = context[:simple_extractor_results]
+          actual_queries = results[:queries]
+
+          actual_queries.first[:multiplex_start_time]
+        end
+
+        # We assert second multiplex began resolving later than the first one. This proves that the thread-local
+        # `pre_context` in Tracer, which stores multiplex, parsing start times etc., is reset between Query#result
+        # calls.
+        assert multiplex_start_times[1] > multiplex_start_times[0]
+      end
+
       test 'extracts metrics in all of the same ways, when a multiplex is executed - regardless if queries are pre-parsed or not' do
         queries = [
           {
