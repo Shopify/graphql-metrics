@@ -80,6 +80,7 @@ parsing and validation runtime metrics will not be added to the `metrics` hash.
     #   validation_duration: 0.01704599999357015,
     #   analysis_start_time_offset: 0.0010339999571442604,
     #   analysis_duration: 0.0008190000080503523,
+    #   multiplex_start_time: 0.0008190000080503523,
     # }
     #
     # You can use these metrics to track high-level query performance, along with any other details you wish to

@@ -113,13 +113,37 @@ module GraphQL
         assert_equal_with_diff_on_failure(kitchen_sink_expected_arguments, actual_arguments)
       end
 
-      test 'extracts metrics from queries, as well as their fields and arguments (when using Query.execute)' do
+      test 'extracts metrics from queries, as well as their fields and arguments (when using Schema.execute)' do
         context = {}
         result = SchemaWithFullMetrics.execute(
           kitchen_sink_query_document,
           variables: { 'postId': '1', 'titleUpcase': true },
           operation_name: 'PostDetails',
           context: context
+        )
+
+        refute result['errors'].present?
+        assert result['data'].present?
+
+        results = context[:simple_extractor_results]
+
+        actual_queries = results[:queries]
+        actual_fields = results[:fields]
+        actual_arguments = results[:arguments]
+
+        assert_equal_with_diff_on_failure(kitchen_sink_expected_queries, actual_queries)
+        assert_equal_with_diff_on_failure(kitchen_sink_expected_fields, actual_fields)
+        assert_equal_with_diff_on_failure(kitchen_sink_expected_arguments, actual_arguments)
+      end
+
+      test 'extracts metrics from queries, as well as their fields and arguments (when using Schema.execute), even with validation skipped' do
+        context = {}
+        result = SchemaWithFullMetrics.execute(
+          kitchen_sink_query_document,
+          variables: { 'postId': '1', 'titleUpcase': true },
+          operation_name: 'PostDetails',
+          context: context,
+          validate: false
         )
 
         refute result['errors'].present?
@@ -162,17 +186,42 @@ module GraphQL
             :operation_name=>"PostDetails",
             :query_start_time=>SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
             :query_duration=>SomeNumber.new(at_least: 2),
-            :parsing_start_time_offset=>SomeNumber.new(at_least: 0),
+            :parsing_start_time_offset=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
             :parsing_duration=>SomeNumber.new(at_least: 0),
             :validation_start_time_offset=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
             :validation_duration=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
             :analysis_start_time_offset=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
             :analysis_duration=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+            :multiplex_start_time=>SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
           }
         ]
         assert_equal_with_diff_on_failure(expected_queries, actual_queries)
         assert_equal_with_diff_on_failure(kitchen_sink_expected_fields, actual_fields)
         assert_equal_with_diff_on_failure(kitchen_sink_expected_arguments, actual_arguments)
+      end
+
+      test 'GraphQL::Querys executed in the same thread have increasing `multiplex_start_time`s (regression test; see below)' do
+        multiplex_start_times = 2.times.map do
+          context = {}
+          query = GraphQL::Query.new(
+            SchemaWithFullMetrics,
+            kitchen_sink_query_document,
+            variables: { 'postId': '1', 'titleUpcase': true },
+            operation_name: 'PostDetails',
+            context: context
+          )
+          result = query.result.to_h
+
+          results = context[:simple_extractor_results]
+          actual_queries = results[:queries]
+
+          actual_queries.first[:multiplex_start_time]
+        end
+
+        # We assert second multiplex began resolving later than the first one. This proves that the thread-local
+        # `pre_context` in Tracer, which stores multiplex, parsing start times etc., is reset between Query#result
+        # calls.
+        assert multiplex_start_times[1] > multiplex_start_times[0]
       end
 
       test 'extracts metrics in all of the same ways, when a multiplex is executed - regardless if queries are pre-parsed or not' do
@@ -210,12 +259,13 @@ module GraphQL
           :operation_name => "OtherQuery",
           :query_start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
           :query_duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
-          :parsing_start_time_offset => SomeNumber.new(at_least: 0),
+          :parsing_start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
           :parsing_duration => SomeNumber.new(at_least: 0),
           :validation_start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
           :validation_duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
           :analysis_start_time_offset=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
           :analysis_duration=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+          :multiplex_start_time=>SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
         }]
 
         expected_other_query_fields = [{
@@ -592,6 +642,7 @@ module GraphQL
             :validation_duration=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
             :analysis_start_time_offset=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
             :analysis_duration=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+            :multiplex_start_time=>SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
           }
         ]
 
@@ -1012,6 +1063,7 @@ module GraphQL
             :validation_duration=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
             :analysis_start_time_offset=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
             :analysis_duration=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+            :multiplex_start_time=>SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
           }
         ]
       end

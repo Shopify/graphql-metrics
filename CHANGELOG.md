@@ -1,3 +1,7 @@
+4.0.6
+-----
+- [35](https://github.com/Shopify/graphql-metrics/pull/35) Fix query start time, start time offset bugs.
+
 4.0.5
 -----
 - [34](https://github.com/Shopify/graphql-metrics/pull/34) Fix default of pre-parsed query `parsing_duration` to be Float (`0.0`) rather than Integer (`0`).

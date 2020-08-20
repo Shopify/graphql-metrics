@@ -47,6 +47,7 @@ module GraphQL
             validation_duration: ns[GraphQL::Metrics::VALIDATION_DURATION],
             analysis_start_time_offset: ns[GraphQL::Metrics::ANALYSIS_START_TIME_OFFSET],
             analysis_duration: ns[GraphQL::Metrics::ANALYSIS_DURATION],
+            multiplex_start_time: ns[GraphQL::Metrics::MULTIPLEX_START_TIME],
           }
 
           analyzer.extract_fields
