@@ -181,9 +181,6 @@ class Schema < GraphQL::Schema
   query QueryRoot
   mutation MutationRoot
 
-  use GraphQL::Execution::Interpreter # Required.
-  use GraphQL::Analysis::AST # Required.
-
   query_analyzer SimpleAnalyzer
 
   instrument :query, GraphQL::Metrics::Instrumentation.new # Both of these are required if either is used.
@@ -202,9 +199,6 @@ analyzer without `GraphQL::Metrics::Instrumentation` and `tracer GraphQL::Metric
 class Schema < GraphQL::Schema
   query QueryRoot
   mutation MutationRoot
-
-  use GraphQL::Execution::Interpreter # Required.
-  use GraphQL::Analysis::AST # Required.
 
   query_analyzer SimpleAnalyzer
 end
