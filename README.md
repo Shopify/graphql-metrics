@@ -44,12 +44,10 @@ etc.
 
 What you do with these captured metrics is up to you!
 
-**NOTE**: Runtime metrics on for queries (like `query_duration`, `parsing_start_time_offset` etc.) as well as field
-resolver timings (like `resolver_timings`, `lazy_resolver_timings`) may not be present in the extracted `metrics` hash,
+**NOTE**: If any non-`graphql-ruby` gem-related exceptions occur in your application during query document
+parsing and validation, **runtime metrics** for queries (like `query_duration`, `parsing_start_time_offset` etc.) as well as field
+resolver timings (like `resolver_timings`, `lazy_resolver_timings`) **may not be present** in the extracted `metrics` hash,
 even if you opt to collect them by using `GraphQL::Metrics::Analyzer` and `GraphQL::Metrics::Tracer`.
-
-More specifically, if any non-`graphql-ruby` gem-related exceptions occur in your application during query document
-parsing and validation runtime metrics will not be added to the `metrics` hash.
 
 ### Define your own analyzer subclass
 
