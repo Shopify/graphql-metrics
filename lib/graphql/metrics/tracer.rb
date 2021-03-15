@@ -3,12 +3,13 @@
 module GraphQL
   module Metrics
     class Tracer
-      # NOTE: These constants come from the graphql ruby gem.
-      GRAPHQL_GEM_EXECUTE_MULTIPLEX_KEY = 'execute_multiplex'
-      GRAPHQL_GEM_LEXING_KEY = 'lex'
-      GRAPHQL_GEM_PARSING_KEY = 'parse'
+      # NOTE: These constants come from the graphql ruby gem and are in "chronological" order based on the phases
+      # of execution of the graphql-ruby gem. Most of them can be run multiple times when multiplexing multiple queries.
+      GRAPHQL_GEM_LEXING_KEY = 'lex' # may not trigger if the query is passed in pre-parsed
+      GRAPHQL_GEM_PARSING_KEY = 'parse' # may not trigger if the query is passed in pre-parsed
+      GRAPHQL_GEM_EXECUTE_MULTIPLEX_KEY = 'execute_multiplex' # wraps everything below this line; only run once
       GRAPHQL_GEM_VALIDATION_KEY = 'validate'
-      GRAPHQL_GEM_ANALYZE_MULTIPLEX_KEY = 'analyze_multiplex'
+      GRAPHQL_GEM_ANALYZE_MULTIPLEX_KEY = 'analyze_multiplex' # wraps all `analyze_query`s; only run once
       GRAPHQL_GEM_ANALYZE_QUERY_KEY = 'analyze_query'
       GRAPHQL_GEM_EXECUTE_QUERY_KEY = 'execute_query'
       GRAPHQL_GEM_TRACING_FIELD_KEYS = [
@@ -18,20 +19,18 @@ module GraphQL
 
       def trace(key, data, &block)
         # NOTE: Context doesn't exist yet during lexing, parsing.
-        possible_context = data[:query]&.context
-
-        skip_tracing = possible_context&.fetch(GraphQL::Metrics::SKIP_GRAPHQL_METRICS_ANALYSIS, false)
+        context = data[:query]&.context
+        skip_tracing = context&.fetch(GraphQL::Metrics::SKIP_GRAPHQL_METRICS_ANALYSIS, false)
         return yield if skip_tracing
 
         case key
-        when GRAPHQL_GEM_EXECUTE_MULTIPLEX_KEY
-          return capture_multiplex_start_time(&block)
         when GRAPHQL_GEM_LEXING_KEY
           return capture_lexing_time(&block)
         when GRAPHQL_GEM_PARSING_KEY
           return capture_parsing_time(&block)
+        when GRAPHQL_GEM_EXECUTE_MULTIPLEX_KEY
+          return capture_multiplex_start_time(&block)
         when GRAPHQL_GEM_VALIDATION_KEY
-          context = possible_context
           return capture_validation_time(context, &block)
         when GRAPHQL_GEM_ANALYZE_MULTIPLEX_KEY
           # Ensures that we reset potentially long-lived PreContext objects between multiplexs. We reset at this point
@@ -39,13 +38,11 @@ module GraphQL
           pre_context.reset
           return yield
         when GRAPHQL_GEM_ANALYZE_QUERY_KEY
-          context = possible_context
           return capture_analysis_time(context, &block)
         when GRAPHQL_GEM_EXECUTE_QUERY_KEY
-          context = possible_context
           capture_query_start_time(context, &block)
         when *GRAPHQL_GEM_TRACING_FIELD_KEYS
-          return yield if data[:query].context[SKIP_FIELD_AND_ARGUMENT_METRICS]
+          return yield if context[SKIP_FIELD_AND_ARGUMENT_METRICS]
           return yield unless GraphQL::Metrics.timings_capture_enabled?(data[:query].context)
 
           context_key = case key
