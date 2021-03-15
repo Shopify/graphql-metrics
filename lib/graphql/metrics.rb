@@ -26,6 +26,8 @@ module GraphQL
     MULTIPLEX_START_TIME_MONOTONIC = :multiplex_start_time_monotonic
     QUERY_START_TIME = :query_start_time
     QUERY_START_TIME_MONOTONIC = :query_start_time_monotonic
+    LEXING_START_TIME_OFFSET = :lexing_start_time_offset
+    LEXING_DURATION = :lexing_duration
     PARSING_START_TIME_OFFSET = :parsing_start_time_offset
     PARSING_DURATION = :parsing_duration
     VALIDATION_START_TIME_OFFSET = :validation_start_time_offset

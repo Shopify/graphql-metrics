@@ -45,6 +45,8 @@ module GraphQL
             parsing_duration: ns[GraphQL::Metrics::PARSING_DURATION],
             validation_start_time_offset: ns[GraphQL::Metrics::VALIDATION_START_TIME_OFFSET],
             validation_duration: ns[GraphQL::Metrics::VALIDATION_DURATION],
+            lexing_start_time_offset: ns[GraphQL::Metrics::LEXING_START_TIME_OFFSET],
+            lexing_duration: ns[GraphQL::Metrics::LEXING_DURATION],
             analysis_start_time_offset: ns[GraphQL::Metrics::ANALYSIS_START_TIME_OFFSET],
             analysis_duration: ns[GraphQL::Metrics::ANALYSIS_DURATION],
             multiplex_start_time: ns[GraphQL::Metrics::MULTIPLEX_START_TIME],
