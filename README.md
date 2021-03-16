@@ -7,6 +7,9 @@ Compatible with the [`graphql-batch` gem](https://github.com/Shopify/graphql-bat
 
 Be sure to read the [CHANGELOG](CHANGELOG.md) to stay updated on feature additions, breaking changes made to this gem.
 
+**NOTE**: Not tested with graphql-ruby's multiplexing feature. Metrics may not
+be accurate if you execute multiple operations at once.
+
 ## Installation
 
 Add this line to your application's Gemfile:
@@ -72,6 +75,8 @@ even if you opt to collect them by using `GraphQL::Metrics::Analyzer` and `Graph
     #   operation_name: "PostDetails",
     #   query_start_time: 1573833076.027327,
     #   query_duration: 2.0207119999686256,
+    #   lexing_start_time_offset: 0.0010339999571442604,
+    #   lexing_duration: 0.0008190000080503523,
     #   parsing_start_time_offset: 0.0010339999571442604,
     #   parsing_duration: 0.0008190000080503523,
     #   validation_start_time_offset: 0.0030819999519735575,
@@ -216,13 +221,15 @@ your application as intended, here's a breakdown of the order of execution of th
 
  When used as instrumentation, an analyzer and tracing, the order of execution is:
 
-* Tracer.setup_tracing
+* Tracer.capture_lexing_time
 * Tracer.capture_parsing_time
+* Tracer.capture_multiplex_start_time
 * Instrumentation.before_query (context setup)
 * Tracer.capture_validation_time
 * Tracer.capture_analysis_time
 * Analyzer#initialize (bit more context setup, instance vars setup)
 * Analyzer#result
+* Tracer.capture_query_start_time
 * Tracer.trace_field (n times)
 * Instrumentation.after_query (call query and field callbacks, now that we have all static and runtime metrics
   gathered)
