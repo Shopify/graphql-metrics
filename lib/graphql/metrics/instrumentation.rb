@@ -9,6 +9,8 @@ module GraphQL
           query.context[GraphQL::Metrics::SKIP_GRAPHQL_METRICS_ANALYSIS] = true
         end
 
+        puts '* Instrumentation.before_query'
+
         # Even if queries are present and valid, applications may set this context value in order to opt out of
         # having Analyzer and Tracer gather runtime metrics.
         # If we're skipping runtime metrics, then both Instrumentation before_ and after_query can and should be
@@ -37,6 +39,8 @@ module GraphQL
           analyzer.extract_query
         else
           query_duration = GraphQL::Metrics.current_time_monotonic - ns[GraphQL::Metrics::QUERY_START_TIME_MONOTONIC]
+
+          puts '* Instrumentation.after_query - query_duration extracted for current query'
 
           runtime_query_metrics = {
             query_start_time: ns[GraphQL::Metrics::QUERY_START_TIME],

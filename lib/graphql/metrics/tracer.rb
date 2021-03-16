@@ -17,6 +17,8 @@ module GraphQL
       ]
 
       def trace(key, data, &block)
+        puts "* Tracer.trace(#{key})"
+
         # NOTE: Context doesn't exist yet during lexing, parsing.
         possible_context = data[:query]&.context
 
@@ -87,6 +89,8 @@ module GraphQL
       end
 
       def capture_multiplex_start_time
+        puts "  * Capturing pre_context.multiplex_start_time_* in pre_context"
+
         pre_context.multiplex_start_time = GraphQL::Metrics.current_time
         pre_context.multiplex_start_time_monotonic = GraphQL::Metrics.current_time_monotonic
 
@@ -98,6 +102,8 @@ module GraphQL
         # `pre_context.multiplex_start_time_monotonic` isn't set.
         lexing_offset_time = pre_context.multiplex_start_time_monotonic || GraphQL::Metrics.current_time_monotonic
         timed_result = GraphQL::Metrics.time(lexing_offset_time) { yield }
+
+        puts "  * Capturing pre_context.lexing_* in pre_context"
 
         pre_context.lexing_start_time_offset = timed_result.start_time
         pre_context.lexing_duration = timed_result.duration
@@ -113,6 +119,8 @@ module GraphQL
 
         pre_context.parsing_start_time_offset = timed_result.start_time
         pre_context.parsing_duration = timed_result.duration
+
+        puts "  * Capturing pre_context.parsing_* in pre_context"
 
         timed_result.result
       end
@@ -143,6 +151,9 @@ module GraphQL
         ns[VALIDATION_START_TIME_OFFSET] = timed_result.time_since_offset
         ns[VALIDATION_DURATION] = timed_result.duration
 
+        puts "  * Capturing last pre_context.parsing_*, lexing_* times in this query's context"
+        puts "  * Capturing validation time in this query's context"
+
         timed_result.result
       end
 
@@ -154,6 +165,8 @@ module GraphQL
         ns[ANALYSIS_START_TIME_OFFSET] = timed_result.time_since_offset
         ns[ANALYSIS_DURATION] = timed_result.duration
 
+        puts "  * Capturing analysis time in this query's context"
+
         timed_result.result
       end
 
@@ -162,7 +175,11 @@ module GraphQL
         ns[QUERY_START_TIME] = GraphQL::Metrics.current_time
         ns[QUERY_START_TIME_MONOTONIC] = GraphQL::Metrics.current_time_monotonic
 
+        puts "  * Capturing execute time in this query's context"
+
         yield
+
+        puts " AFTER capture_query_start_time"
       end
 
       def trace_field(context_key, data)
@@ -176,6 +193,8 @@ module GraphQL
         ns[context_key][path_excluding_numeric_indicies] << {
           start_time_offset: timed_result.time_since_offset, duration: timed_result.duration
         }
+
+        puts "  * Capturing field execution time in this query's context"
 
         timed_result.result
       end

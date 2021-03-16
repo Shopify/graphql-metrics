@@ -37,6 +37,12 @@ class Post < GraphQL::Schema::Object
 
   field :id, ID, null: false
 
+  def id
+    puts '  * in Post.id resolver'
+
+    object[:id]
+  end
+
   field :title, String, null: false do
     argument :upcase, Boolean, required: false, prepare: ->(value, ctx) do
       if ctx[:raise_in_prepare]
@@ -47,8 +53,20 @@ class Post < GraphQL::Schema::Object
     end
   end
 
+  def title
+    puts '  * in Post.title resolver'
+
+    object[:title]
+  end
+
   field :body, String, null: false do
     argument :truncate, Boolean, required: false, default_value: false
+  end
+
+  def body(truncate:)
+    puts '  * in Post.body resolver'
+
+    object[:body]
   end
 
   field :deprecated_body, String, null: false, method: :body, deprecation_reason: 'Use `body` instead.'
@@ -59,6 +77,8 @@ class Post < GraphQL::Schema::Object
   end
 
   def comments(args)
+    puts '  * in Post.comments resolver'
+
     CommentLoader.for(Comment).load_many(args[:ids]).then { |comments| comments }
   end
 end

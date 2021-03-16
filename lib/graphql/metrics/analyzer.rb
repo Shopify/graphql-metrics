@@ -46,6 +46,8 @@ module GraphQL
 
         extract_arguments(argument_values, visitor.field_definition) if argument_values
 
+        puts "  * Analyzer.on_leave_field - #{node.name}"
+
         static_metrics = {
           field_name: node.name,
           return_type_name: visitor.type_definition.graphql_name,
