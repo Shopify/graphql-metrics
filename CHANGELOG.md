@@ -1,3 +1,7 @@
+4.1.0
+-----
+- [42](https://github.com/Shopify/graphql-metrics/pull/42) Capture timing of the `lex` phase.
+
 4.0.6
 -----
 - [35](https://github.com/Shopify/graphql-metrics/pull/35) Fix query start time, start time offset bugs.
