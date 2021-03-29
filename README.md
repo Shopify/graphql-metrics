@@ -219,11 +219,11 @@ order in which methods defined on `GraphQL::Metrics::Instrumentation`, `GraphQL:
 Although you ideally will not need to care about these details if you are simply using this gem to gather metrics in
 your application as intended, here's a breakdown of the order of execution of the methods involved:
 
- When used as instrumentation, an analyzer and tracing, the order of execution is:
+ When used as instrumentation, an analyzer and tracing, the order of execution is usually:
 
+* Tracer.capture_multiplex_start_time
 * Tracer.capture_lexing_time
 * Tracer.capture_parsing_time
-* Tracer.capture_multiplex_start_time
 * Instrumentation.before_query (context setup)
 * Tracer.capture_validation_time
 * Tracer.capture_analysis_time

@@ -4,10 +4,12 @@ module GraphQL
   module Metrics
     class Tracer
       # NOTE: These constants come from the graphql ruby gem and are in "chronological" order based on the phases
-      # of execution of the graphql-ruby gem. Most of them can be run multiple times when multiplexing multiple queries.
+      # of execution of the graphql-ruby gem, though old versions of the gem aren't always consistent about this (see
+      # https://github.com/rmosolgo/graphql-ruby/issues/3393). Most of them can be run multiple times when
+      # multiplexing multiple queries.
+      GRAPHQL_GEM_EXECUTE_MULTIPLEX_KEY = 'execute_multiplex' # wraps everything below this line; only run once
       GRAPHQL_GEM_LEXING_KEY = 'lex' # may not trigger if the query is passed in pre-parsed
       GRAPHQL_GEM_PARSING_KEY = 'parse' # may not trigger if the query is passed in pre-parsed
-      GRAPHQL_GEM_EXECUTE_MULTIPLEX_KEY = 'execute_multiplex' # wraps everything below this line; only run once
       GRAPHQL_GEM_VALIDATION_KEY = 'validate'
       GRAPHQL_GEM_ANALYZE_MULTIPLEX_KEY = 'analyze_multiplex' # wraps all `analyze_query`s; only run once
       GRAPHQL_GEM_ANALYZE_QUERY_KEY = 'analyze_query'
@@ -24,12 +26,12 @@ module GraphQL
         return yield if skip_tracing
 
         case key
+        when GRAPHQL_GEM_EXECUTE_MULTIPLEX_KEY
+          return capture_multiplex_start_time(&block)
         when GRAPHQL_GEM_LEXING_KEY
           return capture_lexing_time(&block)
         when GRAPHQL_GEM_PARSING_KEY
           return capture_parsing_time(&block)
-        when GRAPHQL_GEM_EXECUTE_MULTIPLEX_KEY
-          return capture_multiplex_start_time(&block)
         when GRAPHQL_GEM_VALIDATION_KEY
           return capture_validation_time(context, &block)
         when GRAPHQL_GEM_ANALYZE_MULTIPLEX_KEY
