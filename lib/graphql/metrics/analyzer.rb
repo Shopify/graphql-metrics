@@ -80,6 +80,10 @@ module GraphQL
         end
       end
 
+      def on_enter_directive(node, parent, visitor)
+        directive_extracted({ directive_name: node.name })
+      end
+
       def result
         return if GraphQL::Metrics.timings_capture_enabled?(query.context)
         return if query.context[GraphQL::Metrics::SKIP_GRAPHQL_METRICS_ANALYSIS]

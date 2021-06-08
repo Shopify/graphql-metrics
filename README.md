@@ -141,6 +141,14 @@ even if you opt to collect them by using `GraphQL::Metrics::Analyzer` and `Graph
       store_metrics(:fields, metrics)
     end
 
+    # @param metrics [Hash] Directive metrics, including a few details about the directive
+    # {
+    #   directive_name: "PostDetails",
+    # }
+    def directive_extracted(metrics)
+      store_metrics(:directives, metrics)
+    end
+
     # @param metrics [Hash] Argument usage metrics, including a few details about the query document itself, as well
     # as resolver timings metrics, also ahering to the Apollo Tracing spec referred to above.
     # {

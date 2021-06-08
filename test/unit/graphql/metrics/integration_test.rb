@@ -48,6 +48,7 @@ module GraphQL
             queries: [],
             fields: [],
             arguments: [],
+            directives: [],
           }
         end
 
@@ -63,6 +64,10 @@ module GraphQL
           store_metrics(:arguments, metrics)
         end
 
+        def directive_extracted(metrics)
+          store_metrics(:directives, metrics)
+        end
+
         private
 
         def store_metrics(context_key, metrics)
@@ -73,10 +78,9 @@ module GraphQL
       class SchemaWithFullMetrics < GraphQL::Schema
         query QueryRoot
         mutation MutationRoot
+        directive CustomDirective
 
         use GraphQL::Batch
-        use GraphQL::Execution::Interpreter
-        use GraphQL::Analysis::AST
 
         instrument :query, GraphQL::Metrics::Instrumentation.new
         query_analyzer SimpleAnalyzer
@@ -111,6 +115,80 @@ module GraphQL
         assert_equal_with_diff_on_failure(kitchen_sink_expected_queries, actual_queries)
         assert_equal_with_diff_on_failure(kitchen_sink_expected_fields, actual_fields)
         assert_equal_with_diff_on_failure(kitchen_sink_expected_arguments, actual_arguments)
+      end
+
+      test 'metrics for directives are empty if no directives are found' do
+        context = {}
+        query = GraphQL::Query.new(
+          SchemaWithFullMetrics,
+          kitchen_sink_query_document,
+          variables: { 'postId': '1' },
+          operation_name: 'PostDetails',
+          context: context
+        )
+        result = query.result.to_h
+
+        refute result['errors'].present?
+        assert result['data'].present?
+
+        results = context[:simple_extractor_results]
+
+        actual_directives = results[:directives]
+
+        assert_equal_with_diff_on_failure([], actual_directives)
+      end
+
+      test 'extracts metrics from directives on QUERY location' do
+        context = {}
+        query = GraphQL::Query.new(
+          SchemaWithFullMetrics,
+          query_document_with_directive,
+          variables: { 'postId': '1', 'titleUpcase': true },
+          operation_name: 'PostDetails',
+          context: context
+        )
+        result = query.result.to_h
+
+        refute result['errors'].present?
+        assert result['data'].present?
+
+        results = context[:simple_extractor_results]
+
+        actual_directives = results[:directives]
+
+        assert_equal_with_diff_on_failure([{ directive_name: "customDirective" }], actual_directives)
+      end
+
+      test 'extracts metrics from directives on MUTATION location' do
+        context = {}
+        query = GraphQL::Query.new(
+          SchemaWithFullMetrics,
+          mutation_document_with_directive,
+          variables: {
+            'postInput': {
+              "title": "Hello",
+              "body": "World!",
+              "embeddedTags": [
+                {
+                  "handle": "fun",
+                  "displayName": "Fun",
+                },
+              ],
+            }
+          },
+          operation_name: 'PostCreate',
+          context: context
+        )
+        result = query.result.to_h
+
+        refute result['errors'].present?
+        assert result['data'].present?
+
+        results = context[:simple_extractor_results]
+
+        actual_directives = results[:directives]
+
+        assert_equal_with_diff_on_failure([{ directive_name: "customDirective" }], actual_directives)
       end
 
       test 'extracts metrics from queries, as well as their fields and arguments (when using Schema.execute)' do
@@ -469,7 +547,7 @@ module GraphQL
 
         results = context[:simple_extractor_results]
 
-        expected = {:queries=>[], :fields=>[], :arguments=>[]}
+        expected = {queries: [], fields: [], arguments: [], directives: []}
         assert_equal(expected, results)
       end
 
@@ -757,8 +835,6 @@ module GraphQL
         mutation MutationRoot
 
         use GraphQL::Batch
-        use GraphQL::Execution::Interpreter
-        use GraphQL::Analysis::AST
 
         query_analyzer SimpleAnalyzer
       end
@@ -1389,6 +1465,35 @@ module GraphQL
                 id                                   # loaded at the same time as 1,2 since they are the same field
                 body                                 # invoked twice, whereas Comment.comments is a different field
               }                                      # than Post.comments
+            }
+          }
+
+          query OperationNotSelected {
+            post(id: "1") {
+              id
+            }
+          }
+        GRAPHQL
+      end
+
+      def query_document_with_directive
+        <<~GRAPHQL
+          query PostDetails($postId: ID!) @customDirective(val: 10) {
+            post(id: $postId) {
+              __typename # Ignored
+              id
+            }
+          }
+        GRAPHQL
+      end
+
+      def mutation_document_with_directive
+        <<~GRAPHQL
+          mutation PostCreate($postInput: PostInput!) @customDirective(val: 10) {
+            postCreate(post: $postInput) {
+              post {
+                id
+              }
             }
           }
 
