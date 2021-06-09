@@ -141,9 +141,9 @@ even if you opt to collect them by using `GraphQL::Metrics::Analyzer` and `Graph
       store_metrics(:fields, metrics)
     end
 
-    # @param metrics [Hash] Directive metrics, including a few details about the directive
+    # @param metrics [Hash] Directive metrics
     # {
-    #   directive_name: "PostDetails",
+    #   directive_name: "customDirective",
     # }
     def directive_extracted(metrics)
       store_metrics(:directives, metrics)
@@ -154,8 +154,8 @@ even if you opt to collect them by using `GraphQL::Metrics::Analyzer` and `Graph
     # {
     #   argument_name: "id",
     #   argument_type_name: "ID",
-    #   parent_field_name: "post",
-    #   parent_field_type_name: "QueryRoot",
+    #   parent_name: "post",
+    #   parent_type_name: "QueryRoot",
     #   default_used: false,
     #   value_is_null: false,
     #   value: <GraphQL::Query::Arguments::ArgumentValue>,

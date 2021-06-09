@@ -138,12 +138,12 @@ module GraphQL
         assert_equal_with_diff_on_failure([], actual_directives)
       end
 
-      test 'extracts metrics from directives on QUERY location' do
+      test 'extracts metrics from directives on QUERY and FIELD location' do
         context = {}
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,
           query_document_with_directive,
-          variables: { 'postId': '1', 'titleUpcase': true },
+          variables: { 'postId': '1', 'titleUpcase': true, 'val': 10 },
           operation_name: 'PostDetails',
           context: context
         )
@@ -155,8 +155,53 @@ module GraphQL
         results = context[:simple_extractor_results]
 
         actual_directives = results[:directives]
+        actual_arguments = results[:arguments]
 
-        assert_equal_with_diff_on_failure([{ directive_name: "customDirective" }], actual_directives)
+        expected_arguments = [
+          {
+            argument_name: "if",
+            argument_type_name: "Boolean",
+            parent_name: "skip",
+            parent_type_name: "__Directive",
+            parent_input_object_type: nil,
+            default_used: false,
+            value_is_null: false,
+            value: SomeArgumentValue.new,
+          }, {
+            argument_name: "id",
+            argument_type_name: "ID",
+            parent_name: "post",
+            parent_type_name: "QueryRoot",
+            parent_input_object_type: nil,
+            default_used: false,
+            value_is_null: false,
+            value: SomeArgumentValue.new,
+          }, {
+            argument_name: "locale",
+            argument_type_name: "String",
+            parent_name: "post",
+            parent_type_name: "QueryRoot",
+            parent_input_object_type: nil,
+            default_used: true,
+            value_is_null: false,
+            value: SomeArgumentValue.new,
+          }, {
+            argument_name: "val",
+            argument_type_name: "Int",
+            parent_name: "customDirective",
+            parent_type_name: "__Directive",
+            parent_input_object_type: nil,
+            default_used: false,
+            value_is_null: false,
+            value: SomeArgumentValue.new
+          }
+        ]
+
+        assert_equal_with_diff_on_failure(
+          [{ directive_name: 'skip' }, { directive_name: 'customDirective' }],
+          actual_directives
+        )
+        assert_equal_with_diff_on_failure(expected_arguments, actual_arguments)
       end
 
       test 'extracts metrics from directives on MUTATION location' do
@@ -187,8 +232,76 @@ module GraphQL
         results = context[:simple_extractor_results]
 
         actual_directives = results[:directives]
+        actual_arguments = results[:arguments]
 
-        assert_equal_with_diff_on_failure([{ directive_name: "customDirective" }], actual_directives)
+        expected_arguments = [
+          {
+              argument_name: "post",
+              argument_type_name: "PostInput",
+              parent_name: "postCreate",
+              parent_type_name: "MutationRoot",
+              parent_input_object_type: nil,
+              default_used: false,
+              value_is_null: false,
+              value: SomeArgumentValue.new,
+            }, {
+              argument_name: "title",
+              argument_type_name: "String",
+              parent_name: "postCreate",
+              parent_type_name: "MutationRoot",
+              parent_input_object_type: "PostInput",
+              default_used: false,
+              value_is_null: false,
+              value: SomeArgumentValue.new,
+            }, {
+              argument_name: "body",
+              argument_type_name: "String",
+              parent_name: "postCreate",
+              parent_type_name: "MutationRoot",
+              parent_input_object_type: "PostInput",
+              default_used: false,
+              value_is_null: false,
+              value: SomeArgumentValue.new,
+            }, {
+              argument_name: "embeddedTags",
+              argument_type_name: "TagInput",
+              parent_name: "postCreate",
+              parent_type_name: "MutationRoot",
+              parent_input_object_type: "PostInput",
+              default_used: false,
+              value_is_null: false,
+              value: SomeArgumentValue.new,
+            }, {
+              argument_name: "handle",
+              argument_type_name: "String",
+              parent_name: "postCreate",
+              parent_type_name: "MutationRoot",
+              parent_input_object_type: "TagInput",
+              default_used: false,
+              value_is_null: false,
+              value: SomeArgumentValue.new,
+            }, {
+              argument_name: "displayName",
+              argument_type_name: "String",
+              parent_name: "postCreate",
+              parent_type_name: "MutationRoot",
+              parent_input_object_type: "TagInput",
+              default_used: false,
+              value_is_null: false,
+              value: SomeArgumentValue.new,
+            }, {
+              argument_name: "val",
+              argument_type_name: "Int",
+              parent_name: "customDirective",
+              parent_type_name: "__Directive",
+              parent_input_object_type: nil,
+              default_used: false,
+              value_is_null: false,
+              value: SomeArgumentValue.new,
+            }
+          ]
+        assert_equal_with_diff_on_failure([{ directive_name: 'customDirective' }], actual_directives)
+        assert_equal_with_diff_on_failure(expected_arguments, actual_arguments)
       end
 
       test 'extracts metrics from queries, as well as their fields and arguments (when using Schema.execute)' do
@@ -388,8 +501,8 @@ module GraphQL
         expected_other_query_arguments = [{
           :argument_name => "id",
           :argument_type_name => "ID",
-          :parent_field_name => "post",
-          :parent_field_type_name => "QueryRoot",
+          :parent_name => "post",
+          :parent_type_name => "QueryRoot",
           :parent_input_object_type => nil,
           :default_used => false,
           :value_is_null => false,
@@ -397,8 +510,8 @@ module GraphQL
         }, {
           :argument_name => "locale",
           :argument_type_name => "String",
-          :parent_field_name => "post",
-          :parent_field_type_name => "QueryRoot",
+          :parent_name => "post",
+          :parent_type_name => "QueryRoot",
           :parent_input_object_type => nil,
           :default_used => true,
           :value_is_null => false,
@@ -629,8 +742,8 @@ module GraphQL
         [{
           :argument_name => "post",
           :argument_type_name => "PostInput",
-          :parent_field_name => "postCreate",
-          :parent_field_type_name => "MutationRoot",
+          :parent_name => "postCreate",
+          :parent_type_name => "MutationRoot",
           :parent_input_object_type => nil,
           :default_used => false,
           :value_is_null => false,
@@ -638,8 +751,8 @@ module GraphQL
         }, {
           :argument_name => "title",
           :argument_type_name => "String",
-          :parent_field_name => "postCreate",
-          :parent_field_type_name => "MutationRoot",
+          :parent_name => "postCreate",
+          :parent_type_name => "MutationRoot",
           :parent_input_object_type => "PostInput",
           :default_used => false,
           :value_is_null => false,
@@ -647,8 +760,8 @@ module GraphQL
         }, {
           :argument_name => "body",
           :argument_type_name => "String",
-          :parent_field_name => "postCreate",
-          :parent_field_type_name => "MutationRoot",
+          :parent_name => "postCreate",
+          :parent_type_name => "MutationRoot",
           :parent_input_object_type => "PostInput",
           :default_used => false,
           :value_is_null => false,
@@ -656,8 +769,8 @@ module GraphQL
         }, {
           :argument_name => "embeddedTags",
           :argument_type_name => "TagInput",
-          :parent_field_name => "postCreate",
-          :parent_field_type_name => "MutationRoot",
+          :parent_name => "postCreate",
+          :parent_type_name => "MutationRoot",
           :parent_input_object_type => "PostInput",
           :default_used => false,
           :value_is_null => false,
@@ -665,8 +778,8 @@ module GraphQL
         }, {
           :argument_name => "handle",
           :argument_type_name => "String",
-          :parent_field_name => "postCreate",
-          :parent_field_type_name => "MutationRoot",
+          :parent_name => "postCreate",
+          :parent_type_name => "MutationRoot",
           :parent_input_object_type => "TagInput",
           :default_used => false,
           :value_is_null => false,
@@ -674,8 +787,8 @@ module GraphQL
         }, {
           :argument_name => "displayName",
           :argument_type_name => "String",
-          :parent_field_name => "postCreate",
-          :parent_field_type_name => "MutationRoot",
+          :parent_name => "postCreate",
+          :parent_type_name => "MutationRoot",
           :parent_input_object_type => "TagInput",
           :default_used => false,
           :value_is_null => false,
@@ -774,8 +887,8 @@ module GraphQL
         expected_arguments = [{
           :argument_name => "post",
           :argument_type_name => "PostInput",
-          :parent_field_name => "postCreate",
-          :parent_field_type_name => "MutationRoot",
+          :parent_name => "postCreate",
+          :parent_type_name => "MutationRoot",
           :parent_input_object_type => nil,
           :default_used => false,
           :value_is_null => false,
@@ -783,8 +896,8 @@ module GraphQL
         }, {
           :argument_name => "title",
           :argument_type_name => "String",
-          :parent_field_name => "postCreate",
-          :parent_field_type_name => "MutationRoot",
+          :parent_name => "postCreate",
+          :parent_type_name => "MutationRoot",
           :parent_input_object_type => "PostInput",
           :default_used => false,
           :value_is_null => false,
@@ -792,8 +905,8 @@ module GraphQL
         }, {
           :argument_name => "body",
           :argument_type_name => "String",
-          :parent_field_name => "postCreate",
-          :parent_field_type_name => "MutationRoot",
+          :parent_name => "postCreate",
+          :parent_type_name => "MutationRoot",
           :parent_input_object_type => "PostInput",
           :default_used => false,
           :value_is_null => false,
@@ -801,8 +914,8 @@ module GraphQL
         }, {
           :argument_name => "embeddedTags",
           :argument_type_name => "TagInput",
-          :parent_field_name => "postCreate",
-          :parent_field_type_name => "MutationRoot",
+          :parent_name => "postCreate",
+          :parent_type_name => "MutationRoot",
           :parent_input_object_type => "PostInput",
           :default_used => false,
           :value_is_null => false,
@@ -810,8 +923,8 @@ module GraphQL
         }, {
           :argument_name => "handle",
           :argument_type_name => "String",
-          :parent_field_name => "postCreate",
-          :parent_field_type_name => "MutationRoot",
+          :parent_name => "postCreate",
+          :parent_type_name => "MutationRoot",
           :parent_input_object_type => "TagInput",
           :default_used => false,
           :value_is_null => false,
@@ -819,8 +932,8 @@ module GraphQL
         }, {
           :argument_name => "displayName",
           :argument_type_name => "String",
-          :parent_field_name => "postCreate",
-          :parent_field_type_name => "MutationRoot",
+          :parent_name => "postCreate",
+          :parent_type_name => "MutationRoot",
           :parent_input_object_type => "TagInput",
           :default_used => false,
           :value_is_null => false,
@@ -959,8 +1072,8 @@ module GraphQL
         expected_arguments = [{
           :argument_name => "upcase",
           :argument_type_name => "Boolean",
-          :parent_field_name => "title",
-          :parent_field_type_name => "Post",
+          :parent_name => "title",
+          :parent_type_name => "Post",
           :parent_input_object_type => nil,
           :default_used => false,
           :value_is_null => false,
@@ -968,8 +1081,8 @@ module GraphQL
         }, {
           :argument_name => "truncate",
           :argument_type_name => "Boolean",
-          :parent_field_name => "body",
-          :parent_field_type_name => "Post",
+          :parent_name => "body",
+          :parent_type_name => "Post",
           :parent_input_object_type => nil,
           :default_used => true,
           :value_is_null => false,
@@ -977,8 +1090,8 @@ module GraphQL
         }, {
           :argument_name => "ids",
           :argument_type_name => "ID",
-          :parent_field_name => "comments",
-          :parent_field_type_name => "Comment",
+          :parent_name => "comments",
+          :parent_type_name => "Comment",
           :parent_input_object_type => nil,
           :default_used => false,
           :value_is_null => false,
@@ -986,8 +1099,8 @@ module GraphQL
         }, {
           :argument_name => "tags",
           :argument_type_name => "String",
-          :parent_field_name => "comments",
-          :parent_field_type_name => "Comment",
+          :parent_name => "comments",
+          :parent_type_name => "Comment",
           :parent_input_object_type => nil,
           :default_used => false,
           :value_is_null => true,
@@ -995,8 +1108,8 @@ module GraphQL
         }, {
           :argument_name => "ids",
           :argument_type_name => "ID",
-          :parent_field_name => "comments",
-          :parent_field_type_name => "Post",
+          :parent_name => "comments",
+          :parent_type_name => "Post",
           :parent_input_object_type => nil,
           :default_used => false,
           :value_is_null => false,
@@ -1004,8 +1117,8 @@ module GraphQL
         }, {
           :argument_name => "tags",
           :argument_type_name => "String",
-          :parent_field_name => "comments",
-          :parent_field_type_name => "Post",
+          :parent_name => "comments",
+          :parent_type_name => "Post",
           :parent_input_object_type => nil,
           :default_used => false,
           :value_is_null => true,
@@ -1013,8 +1126,8 @@ module GraphQL
         }, {
           :argument_name => "ids",
           :argument_type_name => "ID",
-          :parent_field_name => "comments",
-          :parent_field_type_name => "Post",
+          :parent_name => "comments",
+          :parent_type_name => "Post",
           :parent_input_object_type => nil,
           :default_used => false,
           :value_is_null => false,
@@ -1022,8 +1135,8 @@ module GraphQL
         }, {
           :argument_name => "id",
           :argument_type_name => "ID",
-          :parent_field_name => "post",
-          :parent_field_type_name => "QueryRoot",
+          :parent_name => "post",
+          :parent_type_name => "QueryRoot",
           :parent_input_object_type => nil,
           :default_used => false,
           :value_is_null => false,
@@ -1031,8 +1144,8 @@ module GraphQL
         }, {
           :argument_name => "locale",
           :argument_type_name => "String",
-          :parent_field_name => "post",
-          :parent_field_type_name => "QueryRoot",
+          :parent_name => "post",
+          :parent_type_name => "QueryRoot",
           :parent_input_object_type => nil,
           :default_used => true,
           :value_is_null => false,
@@ -1064,8 +1177,8 @@ module GraphQL
           {
             :argument_name=>"post",
             :argument_type_name=>"PostUpdateInput",
-            :parent_field_name=>"postUpdate",
-            :parent_field_type_name=>"MutationRoot",
+            :parent_name=>"postUpdate",
+            :parent_type_name=>"MutationRoot",
             :parent_input_object_type=>nil,
             :default_used=>false,
             :value_is_null=>false,
@@ -1074,8 +1187,8 @@ module GraphQL
           {
             :argument_name=> "title",
             :argument_type_name=> "String",
-            :parent_field_name=> "postUpdate",
-            :parent_field_type_name=> "MutationRoot",
+            :parent_name=> "postUpdate",
+            :parent_type_name=> "MutationRoot",
             :parent_input_object_type=> "PostUpdateInput",
             :default_used=> true,
             :value_is_null=> false,
@@ -1109,8 +1222,8 @@ module GraphQL
           {
             :argument_name=>"upvote",
             :argument_type_name=>"PostUpvoteInput",
-            :parent_field_name=>"postUpvote",
-            :parent_field_type_name=>"MutationRoot",
+            :parent_name=>"postUpvote",
+            :parent_type_name=>"MutationRoot",
             :parent_input_object_type=>nil,
             :default_used=>false,
             :value_is_null=>false,
@@ -1359,8 +1472,8 @@ module GraphQL
         [{
           :argument_name => "upcase",
           :argument_type_name => "Boolean",
-          :parent_field_name => "title",
-          :parent_field_type_name => "Post",
+          :parent_name => "title",
+          :parent_type_name => "Post",
           :parent_input_object_type => nil,
           :default_used => false,
           :value_is_null => false,
@@ -1368,8 +1481,8 @@ module GraphQL
         }, {
           :argument_name => "truncate",
           :argument_type_name => "Boolean",
-          :parent_field_name => "body",
-          :parent_field_type_name => "Post",
+          :parent_name => "body",
+          :parent_type_name => "Post",
           :parent_input_object_type => nil,
           :default_used => true,
           :value_is_null => false,
@@ -1377,8 +1490,8 @@ module GraphQL
         }, {
           :argument_name => "ids",
           :argument_type_name => "ID",
-          :parent_field_name => "comments",
-          :parent_field_type_name => "Comment",
+          :parent_name => "comments",
+          :parent_type_name => "Comment",
           :parent_input_object_type => nil,
           :default_used => false,
           :value_is_null => false,
@@ -1386,8 +1499,8 @@ module GraphQL
         }, {
           :argument_name => "tags",
           :argument_type_name => "String",
-          :parent_field_name => "comments",
-          :parent_field_type_name => "Comment",
+          :parent_name => "comments",
+          :parent_type_name => "Comment",
           :parent_input_object_type => nil,
           :default_used => false,
           :value_is_null => true,
@@ -1395,8 +1508,8 @@ module GraphQL
         }, {
           :argument_name => "ids",
           :argument_type_name => "ID",
-          :parent_field_name => "comments",
-          :parent_field_type_name => "Post",
+          :parent_name => "comments",
+          :parent_type_name => "Post",
           :parent_input_object_type => nil,
           :default_used => false,
           :value_is_null => false,
@@ -1404,8 +1517,8 @@ module GraphQL
         }, {
           :argument_name => "tags",
           :argument_type_name => "String",
-          :parent_field_name => "comments",
-          :parent_field_type_name => "Post",
+          :parent_name => "comments",
+          :parent_type_name => "Post",
           :parent_input_object_type => nil,
           :default_used => false,
           :value_is_null => true,
@@ -1413,8 +1526,8 @@ module GraphQL
         }, {
           :argument_name => "ids",
           :argument_type_name => "ID",
-          :parent_field_name => "comments",
-          :parent_field_type_name => "Post",
+          :parent_name => "comments",
+          :parent_type_name => "Post",
           :parent_input_object_type => nil,
           :default_used => false,
           :value_is_null => false,
@@ -1422,8 +1535,8 @@ module GraphQL
         }, {
           :argument_name => "id",
           :argument_type_name => "ID",
-          :parent_field_name => "post",
-          :parent_field_type_name => "QueryRoot",
+          :parent_name => "post",
+          :parent_type_name => "QueryRoot",
           :parent_input_object_type => nil,
           :default_used => false,
           :value_is_null => false,
@@ -1431,8 +1544,8 @@ module GraphQL
         }, {
           :argument_name => "locale",
           :argument_type_name => "String",
-          :parent_field_name => "post",
-          :parent_field_type_name => "QueryRoot",
+          :parent_name => "post",
+          :parent_type_name => "QueryRoot",
           :parent_input_object_type => nil,
           :default_used => true,
           :value_is_null => false,
@@ -1477,11 +1590,13 @@ module GraphQL
       end
 
       def query_document_with_directive
+        # directive applied on query and field location
         <<~GRAPHQL
-          query PostDetails($postId: ID!) @customDirective(val: 10) {
+          query PostDetails($postId: ID!, $val: Int!) @customDirective(val: $val) {
             post(id: $postId) {
               __typename # Ignored
               id
+              title @skip(if: true)
             }
           }
         GRAPHQL
