@@ -152,10 +152,11 @@ even if you opt to collect them by using `GraphQL::Metrics::Analyzer` and `Graph
     # @param metrics [Hash] Argument usage metrics, including a few details about the query document itself, as well
     # as resolver timings metrics, also ahering to the Apollo Tracing spec referred to above.
     # {
-    #   argument_name: "id",
+    #   argument_name: "ids",
     #   argument_type_name: "ID",
-    #   parent_name: "post",
-    #   parent_type_name: "QueryRoot",
+    #   parent_name: "comments",
+    #   grandparent_type_name: "Post",
+    #   grandparent_node_name: "post",
     #   default_used: false,
     #   value_is_null: false,
     #   value: <GraphQL::Query::Arguments::ArgumentValue>,
