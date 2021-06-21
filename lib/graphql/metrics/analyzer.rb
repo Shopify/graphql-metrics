@@ -4,6 +4,7 @@ module GraphQL
   module Metrics
     class Analyzer < GraphQL::Analysis::AST::Analyzer
       attr_reader :query
+      DIRECTIVE_TYPE = "__Directive"
 
       def initialize(query_or_multiplex)
         super
@@ -164,13 +165,13 @@ module GraphQL
       end
 
       def extract_argument(value:, definition:, parent_input_object:, parent:)
-        parent_type_name = if definition.is_a? GraphQL::Schema::Field
+        parent_type_name = if definition.is_a?(GraphQL::Schema::Field)
           definition.owner.graphql_name
         else
-          "__Directive"
+          DIRECTIVE_TYPE
         end
 
-        grand_parent_name = if parent.is_a? GraphQL::Language::Nodes::OperationDefinition
+        grand_parent_name = if parent.is_a?(GraphQL::Language::Nodes::OperationDefinition)
           parent.operation_type
         else
           parent.name
