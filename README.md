@@ -141,13 +141,22 @@ even if you opt to collect them by using `GraphQL::Metrics::Analyzer` and `Graph
       store_metrics(:fields, metrics)
     end
 
+    # @param metrics [Hash] Directive metrics
+    # {
+    #   directive_name: "customDirective",
+    # }
+    def directive_extracted(metrics)
+      store_metrics(:directives, metrics)
+    end
+
     # @param metrics [Hash] Argument usage metrics, including a few details about the query document itself, as well
     # as resolver timings metrics, also ahering to the Apollo Tracing spec referred to above.
     # {
-    #   argument_name: "id",
+    #   argument_name: "ids",
     #   argument_type_name: "ID",
-    #   parent_field_name: "post",
-    #   parent_field_type_name: "QueryRoot",
+    #   parent_name: "comments",
+    #   grandparent_type_name: "Post",
+    #   grandparent_node_name: "post",
     #   default_used: false,
     #   value_is_null: false,
     #   value: <GraphQL::Query::Arguments::ArgumentValue>,
@@ -171,6 +180,65 @@ even if you opt to collect them by using `GraphQL::Metrics::Analyzer` and `Graph
 
 Once defined, you can opt into capturing all metrics seen above by simply including GraphQL::Metrics as a plugin on your
 schema.
+#### Metrics that are captured for arguments for fields and directives
+
+Let's have a query example
+
+```graphql
+query PostDetails($postId: ID!, $commentsTags: [String!] = null, $val: Int!) @customDirective(val: $val) {
+  post(id: $postId) {
+    title @skip(if: true)
+    comments(ids: [1, 2], tags: $commentsTags) {
+      id
+      body
+    }
+  }
+}
+```
+These are some of the arguments that are extracted
+
+```ruby
+{
+  argument_name: "if",                    # argument name
+  argument_type_name: "Boolean",          # argument type
+  parent_name: "skip",                    # argument belongs to `skip` directive
+  grandparent_type_name: "__Directive",   # argument was applied to directive
+  grandparent_node_name: "title",         # directive was applied to field title
+  default_used: false,                    # check if default value was used
+  value_is_null: false,                   # check if value was null
+  value: <GraphQL::Execution::Interpreter::ArgumentValue>
+}, {
+  argument_name: "id",
+  argument_name: "ids",
+  argument_type_name: "ID",
+  parent_name: "comments",                # name of the node that argument was applied to
+  grandparent_type_name: "Post",          # grandparent node to uniquely identify which node the argument was applied to
+  grandparent_node_name: "post",          # name of grandparend node
+  default_used: false,
+  value_is_null: false,
+  value: <GraphQL::Execution::Interpreter::ArgumentValue>
+}, {
+  argument_name: "id",
+  argument_type_name: "ID",
+  parent_name: "post",                   # argument applied to post field
+  grandparent_type_name: "QueryRoot",    # post is a QueryRoot
+  grandparent_node_name: "query",        # post field is already in the query root
+  parent_input_object_type: nil,
+  default_used: false,
+  value_is_null: false,
+  value: <GraphQL::Execution::Interpreter::ArgumentValue>
+}, {
+  argument_name: "val",
+  argument_type_name: "Int",
+  parent_name: "customDirective",        # argument belongs to `customDirective` directive
+  grandparent_type_name: "__Directive",  # argument was applied to directive
+  grandparent_node_name: "query",        # directive was applied to query
+  parent_input_object_type: nil,
+  default_used: false,
+  value_is_null: false,
+  value: <GraphQL::Execution::Interpreter::ArgumentValue>
+}
+```
 
 ### Make use of your analyzer
 

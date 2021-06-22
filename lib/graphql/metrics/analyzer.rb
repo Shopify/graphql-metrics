@@ -4,6 +4,7 @@ module GraphQL
   module Metrics
     class Analyzer < GraphQL::Analysis::AST::Analyzer
       attr_reader :query
+      DIRECTIVE_TYPE = "__Directive"
 
       def initialize(query_or_multiplex)
         super
@@ -31,20 +32,16 @@ module GraphQL
         }
       end
 
-      def on_leave_field(node, _parent, visitor)
+      def on_leave_field(node, parent, visitor)
         return if visitor.field_definition.introspection?
         return if query.context[SKIP_FIELD_AND_ARGUMENT_METRICS]
 
-        # Arguments can raise execution errors within their `prepare` methods
-        # which aren't properly handled during analysis so we have to handle
-        # them ourselves safely and return `nil`.
-        argument_values = begin
-          query.arguments_for(node, visitor.field_definition)
-        rescue ::GraphQL::ExecutionError
-          nil
-        end
-
-        extract_arguments(argument_values, visitor.field_definition) if argument_values
+        argument_values = arguments_for(node, visitor.field_definition)
+        extract_arguments(
+          argument: argument_values,
+          definition: visitor.field_definition,
+          parent: parent
+        ) if argument_values
 
         static_metrics = {
           field_name: node.name,
@@ -80,6 +77,17 @@ module GraphQL
         end
       end
 
+      def on_enter_directive(node, parent, visitor)
+        argument_values = arguments_for(node, visitor.directive_definition)
+        extract_arguments(
+          argument: argument_values,
+          definition: visitor.directive_definition,
+          parent: parent
+        ) if argument_values
+
+        directive_extracted({ directive_name: node.name })
+      end
+
       def result
         return if GraphQL::Metrics.timings_capture_enabled?(query.context)
         return if query.context[GraphQL::Metrics::SKIP_GRAPHQL_METRICS_ANALYSIS]
@@ -93,37 +101,88 @@ module GraphQL
 
       private
 
-      def extract_arguments(argument, field_defn, parent_input_object = nil)
+      def arguments_for(node, definition)
+        # Arguments can raise execution errors within their `prepare` methods
+        # which aren't properly handled during analysis so we have to handle
+        # them ourselves safely and return `nil`.
+        query.arguments_for(node, definition)
+      rescue ::GraphQL::ExecutionError
+        nil
+      end
+
+      def extract_arguments(argument:, definition:, parent:, parent_input_object: nil)
         case argument
         when Array
           argument.each do |a|
-            extract_arguments(a, field_defn, parent_input_object)
+            extract_arguments(
+              argument: a,
+              definition: definition,
+              parent_input_object: parent_input_object,
+              parent: parent
+            )
           end
         when Hash
           argument.each_value do |a|
-            extract_arguments(a, field_defn, parent_input_object)
+            extract_arguments(
+              argument: a,
+              definition: definition,
+              parent_input_object: parent_input_object,
+              parent: parent)
           end
         when ::GraphQL::Execution::Interpreter::Arguments
           argument.each_value do |arg_val|
-            extract_arguments(arg_val, field_defn, parent_input_object)
+            extract_arguments(
+              argument: arg_val,
+              definition: definition,
+              parent_input_object: parent_input_object,
+              parent: parent
+          )
           end
         when ::GraphQL::Execution::Interpreter::ArgumentValue
-          extract_argument(argument, field_defn, parent_input_object)
-          extract_arguments(argument.value, field_defn, parent_input_object)
+          extract_argument(
+            value: argument,
+            definition: definition,
+            parent_input_object: parent_input_object,
+            parent: parent
+          )
+          extract_arguments(
+            argument:argument.value,
+            definition: definition,
+            parent_input_object: parent_input_object,
+            parent: parent
+          )
         when ::GraphQL::Schema::InputObject
           input_object_argument_values = argument.arguments.argument_values.values
           parent_input_object = input_object_argument_values.first&.definition&.owner
 
-          extract_arguments(input_object_argument_values, field_defn, parent_input_object)
+          extract_arguments(
+            argument: input_object_argument_values,
+            definition: definition,
+            parent_input_object: parent_input_object,
+            parent: parent
+          )
         end
       end
 
-      def extract_argument(value, field_defn, parent_input_object = nil)
+      def extract_argument(value:, definition:, parent_input_object:, parent:)
+        parent_type_name = if definition.is_a?(GraphQL::Schema::Field)
+          definition.owner.graphql_name
+        else
+          DIRECTIVE_TYPE
+        end
+
+        grand_parent_name = if parent.is_a?(GraphQL::Language::Nodes::OperationDefinition)
+          parent.operation_type
+        else
+          parent.name
+        end
+
         static_metrics = {
           argument_name: value.definition.graphql_name,
           argument_type_name: value.definition.type.unwrap.graphql_name,
-          parent_field_name: field_defn.graphql_name,
-          parent_field_type_name: field_defn.owner.graphql_name,
+          parent_name: definition.graphql_name,
+          grandparent_type_name: parent_type_name,
+          grandparent_node_name: grand_parent_name,
           parent_input_object_type: parent_input_object&.graphql_name,
           default_used: value.default_used?,
           value_is_null: value.value.nil?,

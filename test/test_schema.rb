@@ -114,6 +114,15 @@ class PostUpvote < GraphQL::Schema::Mutation
   end
 end
 
+class CustomDirective < GraphQL::Schema::Directive
+  locations(GraphQL::Schema::Directive::QUERY, GraphQL::Schema::Directive::MUTATION)
+  argument(:val, Integer, "Initial integer value.", required: true)
+
+  def self.resolve(obj, args, ctx)
+     yield
+   end
+end
+
 class MutationRoot < GraphQL::Schema::Object
   field :post_create, mutation: PostCreate
   field :post_update, mutation: PostUpdate
