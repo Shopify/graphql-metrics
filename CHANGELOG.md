@@ -1,3 +1,6 @@
+5.0.0
+-----
+- [50](https://github.com/Shopify/graphql-metrics/pull/50) Add tracking directives and their arguments.
 4.1.0
 -----
 - [42](https://github.com/Shopify/graphql-metrics/pull/42) Capture timing of the `lex` phase.
