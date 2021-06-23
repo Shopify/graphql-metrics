@@ -171,8 +171,11 @@ module GraphQL
           DIRECTIVE_TYPE
         end
 
-        grand_parent_name = if parent.is_a?(GraphQL::Language::Nodes::OperationDefinition)
+        grand_parent_name = case parent
+        when GraphQL::Language::Nodes::OperationDefinition
           parent.operation_type
+        when GraphQL::Language::Nodes::InlineFragment
+          parent.type.name
         else
           parent.name
         end
