@@ -315,6 +315,86 @@ module GraphQL
         assert_equal_with_diff_on_failure(expected_arguments, actual_arguments)
       end
 
+      test 'extracts metrics from directives on QUERY and FIELD location for document with fragment' do
+        context = {}
+        query = GraphQL::Query.new(
+          SchemaWithFullMetrics,
+          query_document_with_fragment,
+          variables: { 'postId': 1, 'titleUpcase': true, 'val': 10 },
+          operation_name: 'PostDetails',
+          context: context
+        )
+        result = query.result.to_h
+
+        refute result['errors'].present?
+        assert result['data'].present?
+
+        results = context[:simple_extractor_results]
+
+        actual_directives = results[:directives]
+        actual_arguments = results[:arguments]
+
+        expected_arguments = [
+          {
+            argument_name: "if",
+            argument_type_name: "Boolean",
+            parent_name: "skip",
+            grandparent_type_name: "__Directive",
+            grandparent_node_name: "id",
+            parent_input_object_type: nil,
+            default_used: false,
+            value_is_null: false,
+            value: SomeArgumentValue.new,
+          }, {
+            argument_name: "upcase",
+            argument_type_name: "Boolean",
+            parent_name: "title",
+            grandparent_type_name: "Post",
+            grandparent_node_name: "Post",
+            parent_input_object_type: nil,
+            default_used: false,
+            value_is_null: false,
+            value: SomeArgumentValue.new,
+          }, {
+            argument_name: "id",
+            argument_type_name: "ID",
+            parent_name: "post",
+            grandparent_type_name: "QueryRoot",
+            grandparent_node_name: "query",
+            parent_input_object_type: nil,
+            default_used: false,
+            value_is_null: false,
+            value: SomeArgumentValue.new,
+          }, {
+            argument_name: "locale",
+            argument_type_name: "String",
+            parent_name: "post",
+            grandparent_type_name: "QueryRoot",
+            grandparent_node_name: "query",
+            parent_input_object_type: nil,
+            default_used: true,
+            value_is_null: false,
+            value: SomeArgumentValue.new,
+          }, {
+            argument_name: "val",
+            argument_type_name: "Int",
+            parent_name: "customDirective",
+            grandparent_type_name: "__Directive",
+            grandparent_node_name: "query",
+            parent_input_object_type: nil,
+            default_used: false,
+            value_is_null: false,
+            value: SomeArgumentValue.new,
+          }
+        ]
+
+        assert_equal_with_diff_on_failure(
+          [{ directive_name: 'skip' }, { directive_name: 'customDirective' }],
+          actual_directives
+        )
+        assert_equal_with_diff_on_failure(expected_arguments, actual_arguments)
+      end
+
       test 'extracts metrics from queries, as well as their fields and arguments (when using Schema.execute)' do
         context = {}
         result = SchemaWithFullMetrics.execute(
@@ -1630,6 +1710,20 @@ module GraphQL
           query OperationNotSelected {
             post(id: "1") {
               id
+            }
+          }
+        GRAPHQL
+      end
+
+      def query_document_with_fragment
+        <<~GRAPHQL
+          query PostDetails($postId: ID!, $titleUpcase: Boolean = false, $val: Int!) @customDirective(val: $val) {
+            post(id: $postId) {
+              __typename # Ignored
+              ... on Post {
+                id @skip(if: true)
+                title(upcase: $titleUpcase)
+              }
             }
           }
         GRAPHQL
