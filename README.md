@@ -2,7 +2,7 @@
 
 ![](https://github.com/Shopify/graphql-metrics/workflows/Ruby/badge.svg)
 
-Extract as much much detail as you want from GraphQL queries, served up from your Ruby app and the [`graphql` gem](https://github.com/rmosolgo/graphql-ruby).
+Extract as much detail as you want from GraphQL queries, served up from your Ruby app and the [`graphql` gem](https://github.com/rmosolgo/graphql-ruby).
 Compatible with the [`graphql-batch` gem](https://github.com/Shopify/graphql-batch), to extract batch-loaded fields resolution timings.
 
 Be sure to read the [CHANGELOG](CHANGELOG.md) to stay updated on feature additions, breaking changes made to this gem.
