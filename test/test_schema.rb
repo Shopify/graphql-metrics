@@ -130,8 +130,8 @@ class MutationRoot < GraphQL::Schema::Object
 end
 
 class QueryRoot < GraphQL::Schema::Object
-  add_field(GraphQL::Types::Relay::NodeField)
-  add_field(GraphQL::Types::Relay::NodesField)
+  include GraphQL::Types::Relay::HasNodeField
+  include GraphQL::Types::Relay::HasNodesField
 
   field :post, Post, null: true do
     argument :id, ID, required: true
