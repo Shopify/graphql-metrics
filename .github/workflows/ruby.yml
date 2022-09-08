@@ -13,8 +13,14 @@ jobs:
       uses: actions/setup-ruby@v1
       with:
         ruby-version: 2.6.x
-    - name: Build and test with Rake
+    - name: Build and test with Graphql 1.13
       run: |
         gem install bundler
-        bundle install --jobs 4 --retry 3
+        bundle install --jobs 4 --retry 3 --gemfile gemfiles/graphql_1.13.gemfile
         bundle exec rake test
+    - name: Build and test with Graphql 2.0
+      run: |
+        gem install bundler
+        bundle install --jobs 4 --retry 3 --gemfile gemfiles/graphql_2.0.gemfile
+        bundle exec rake test
+
