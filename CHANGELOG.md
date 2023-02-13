@@ -1,3 +1,6 @@
+5.0.1
+-----
+- [63](https://github.com/Shopify/graphql-metrics/pull/63) Eliminate `TimedResult` objects for `trace_field`.
 5.0.0
 -----
 - [50](https://github.com/Shopify/graphql-metrics/pull/50) Capture metrics for directives and their arguments.
