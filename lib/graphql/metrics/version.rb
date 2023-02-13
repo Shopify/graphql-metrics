@@ -2,6 +2,6 @@
 
 module GraphQL
   module Metrics
-    VERSION = "5.0.0"
+    VERSION = "5.0.1"
   end
 end
