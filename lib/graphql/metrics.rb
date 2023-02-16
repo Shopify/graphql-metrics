@@ -4,6 +4,7 @@ require "concurrent"
 require "graphql/metrics/version"
 require "graphql/metrics/instrumentation"
 require "graphql/metrics/tracer"
+require "graphql/metrics/trace"
 require "graphql/metrics/analyzer"
 
 module GraphQL

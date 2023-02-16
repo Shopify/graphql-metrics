@@ -5,7 +5,7 @@ require "test_schema"
 
 module GraphQL
   module Metrics
-    class IntegrationTest < ActiveSupport::TestCase
+    class TraceIntegrationTest < ActiveSupport::TestCase
       REASONABLY_RECENT_UNIX_TIME = 1571337000 # aka 2019-10-17 in Unix time.
       SMALL_NONZERO_NUMBER = Float::EPSILON # aka 2.220446049250313e-16
 
@@ -84,7 +84,7 @@ module GraphQL
 
         instrument :query, GraphQL::Metrics::Instrumentation.new
         query_analyzer SimpleAnalyzer
-        tracer GraphQL::Metrics::Tracer.new
+        trace_with GraphQL::Metrics::Trace
 
         def self.parse_error(err, _context)
           return if err.is_a?(GraphQL::ParseError)
@@ -240,16 +240,16 @@ module GraphQL
 
         expected_arguments = [
           {
-            argument_name: "val",
-            argument_type_name: "Int",
-            parent_name: "customDirective",
-            grandparent_type_name: "__Directive",
-            grandparent_node_name: "mutation",
-            parent_input_object_type: nil,
-            default_used: false,
-            value_is_null: false,
-            value: SomeArgumentValue.new,
-          }, {
+              argument_name: "val",
+              argument_type_name: "Int",
+              parent_name: "customDirective",
+              grandparent_type_name: "__Directive",
+              grandparent_node_name: "mutation",
+              parent_input_object_type: nil,
+              default_used: false,
+              value_is_null: false,
+              value: SomeArgumentValue.new,
+            }, {
               argument_name: "post",
               argument_type_name: "PostInput",
               parent_name: "postCreate",
