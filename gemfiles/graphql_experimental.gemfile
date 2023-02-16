@@ -1,0 +1,5 @@
+# frozen_string_literal: true
+
+eval_gemfile("../Gemfile")
+
+gem("graphql", github: "rmosolgo/graphql-ruby", branch: "better-trace-api")

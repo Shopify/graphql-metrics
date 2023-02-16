@@ -159,16 +159,6 @@ module GraphQL
 
         expected_arguments = [
           {
-            argument_name: "val",
-            argument_type_name: "Int",
-            parent_name: "customDirective",
-            grandparent_type_name: "__Directive",
-            grandparent_node_name: "query",
-            parent_input_object_type: nil,
-            default_used: false,
-            value_is_null: false,
-            value: SomeArgumentValue.new
-          }, {
             argument_name: "if",
             argument_type_name: "Boolean",
             parent_name: "skip",
@@ -198,14 +188,24 @@ module GraphQL
             default_used: true,
             value_is_null: false,
             value: SomeArgumentValue.new,
+          }, {
+            argument_name: "val",
+            argument_type_name: "Int",
+            parent_name: "customDirective",
+            grandparent_type_name: "__Directive",
+            grandparent_node_name: "query",
+            parent_input_object_type: nil,
+            default_used: false,
+            value_is_null: false,
+            value: SomeArgumentValue.new
           }
         ]
 
         assert_equal_with_diff_on_failure(
           [{ directive_name: 'customDirective' }, { directive_name: 'skip' }],
-          actual_directives
+          actual_directives.sort_by { |h| h[:directive_name] }
         )
-        assert_equal_with_diff_on_failure(expected_arguments, actual_arguments)
+        assert_equal_with_diff_on_failure(expected_arguments.sort_by { |h| h[:argument_name] }, actual_arguments.sort_by { |h| h[:argument_name] })
       end
 
       test 'extracts metrics from directives on MUTATION location' do
@@ -240,16 +240,6 @@ module GraphQL
 
         expected_arguments = [
           {
-            argument_name: "val",
-            argument_type_name: "Int",
-            parent_name: "customDirective",
-            grandparent_type_name: "__Directive",
-            grandparent_node_name: "mutation",
-            parent_input_object_type: nil,
-            default_used: false,
-            value_is_null: false,
-            value: SomeArgumentValue.new,
-          }, {
               argument_name: "post",
               argument_type_name: "PostInput",
               parent_name: "postCreate",
@@ -309,10 +299,20 @@ module GraphQL
               default_used: false,
               value_is_null: false,
               value: SomeArgumentValue.new,
+            }, {
+              argument_name: "val",
+              argument_type_name: "Int",
+              parent_name: "customDirective",
+              grandparent_type_name: "__Directive",
+              grandparent_node_name: "mutation",
+              parent_input_object_type: nil,
+              default_used: false,
+              value_is_null: false,
+              value: SomeArgumentValue.new,
             }
           ]
         assert_equal_with_diff_on_failure([{ directive_name: 'customDirective' }], actual_directives)
-        assert_equal_with_diff_on_failure(expected_arguments, actual_arguments)
+        assert_equal_with_diff_on_failure(expected_arguments.sort_by { |h| h[:argument_name] }, actual_arguments.sort_by { |h| h[:argument_name] })
       end
 
       test 'extracts metrics from directives on QUERY and FIELD location for document with fragment' do
@@ -336,16 +336,6 @@ module GraphQL
 
         expected_arguments = [
           {
-            argument_name: "val",
-            argument_type_name: "Int",
-            parent_name: "customDirective",
-            grandparent_type_name: "__Directive",
-            grandparent_node_name: "query",
-            parent_input_object_type: nil,
-            default_used: false,
-            value_is_null: false,
-            value: SomeArgumentValue.new,
-          }, {
             argument_name: "if",
             argument_type_name: "Boolean",
             parent_name: "skip",
@@ -385,14 +375,24 @@ module GraphQL
             default_used: true,
             value_is_null: false,
             value: SomeArgumentValue.new,
+          }, {
+            argument_name: "val",
+            argument_type_name: "Int",
+            parent_name: "customDirective",
+            grandparent_type_name: "__Directive",
+            grandparent_node_name: "query",
+            parent_input_object_type: nil,
+            default_used: false,
+            value_is_null: false,
+            value: SomeArgumentValue.new,
           }
         ]
 
         assert_equal_with_diff_on_failure(
           [{ directive_name: 'customDirective' }, { directive_name: 'skip' }],
-          actual_directives
+          actual_directives.sort_by { |h| h[:directive_name] }
         )
-        assert_equal_with_diff_on_failure(expected_arguments, actual_arguments)
+        assert_equal_with_diff_on_failure(expected_arguments.sort_by { |h| h[:argument_name] }, actual_arguments.sort_by { |h| h[:argument_name] })
       end
 
       test 'extracts metrics from queries, as well as their fields and arguments (when using Schema.execute)' do
