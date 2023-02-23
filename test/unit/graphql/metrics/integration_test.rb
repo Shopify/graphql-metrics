@@ -203,9 +203,15 @@ module GraphQL
 
         assert_equal_with_diff_on_failure(
           [{ directive_name: 'skip' }, { directive_name: 'customDirective' }],
-          actual_directives
+          actual_directives,
+          sort_by: ->(x) { x[:directive_name] }
         )
-        assert_equal_with_diff_on_failure(expected_arguments, actual_arguments)
+
+        assert_equal_with_diff_on_failure(
+          expected_arguments,
+          actual_arguments,
+          sort_by: ->(x) { x[:argument_name] }
+        )
       end
 
       test 'extracts metrics from directives on MUTATION location' do
@@ -312,7 +318,7 @@ module GraphQL
             }
           ]
         assert_equal_with_diff_on_failure([{ directive_name: 'customDirective' }], actual_directives)
-        assert_equal_with_diff_on_failure(expected_arguments, actual_arguments)
+        assert_equal_with_diff_on_failure(expected_arguments, actual_arguments, sort_by: ->(x) { x[:argument_name] })
       end
 
       test 'extracts metrics from directives on QUERY and FIELD location for document with fragment' do
@@ -390,9 +396,14 @@ module GraphQL
 
         assert_equal_with_diff_on_failure(
           [{ directive_name: 'skip' }, { directive_name: 'customDirective' }],
-          actual_directives
+          actual_directives,
+          sort_by: -> (x) { x[:directive_name] }
         )
-        assert_equal_with_diff_on_failure(expected_arguments, actual_arguments)
+        assert_equal_with_diff_on_failure(
+          expected_arguments,
+          actual_arguments,
+          sort_by: -> (x) { x[:argument_name] }
+        )
       end
 
       test 'extracts metrics from queries, as well as their fields and arguments (when using Schema.execute)' do
@@ -1385,10 +1396,10 @@ module GraphQL
 
       private
 
-      def assert_equal_with_diff_on_failure(expected, actual)
+      def assert_equal_with_diff_on_failure(expected, actual, sort_by: ->(_x) {} )
         assert_equal(
-          expected,
-          actual,
+          expected.sort_by(&sort_by),
+          actual.sort_by(&sort_by),
           Diffy::Diff.new(JSON.pretty_generate(expected), JSON.pretty_generate(actual))
         )
       end
