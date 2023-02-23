@@ -75,6 +75,8 @@ module GraphQL
           self[:multiplex_start_time_monotonic] = nil
           self[:parsing_start_time_offset] = nil
           self[:parsing_duration] = nil
+          self[:lexing_start_time_offset] = nil
+          self[:lexing_duration] = nil
         end
       end
 
