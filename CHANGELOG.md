@@ -1,3 +1,10 @@
+5.0.3
+=====
+- [69](https://github.com/Shopify/graphql-metrics/pull/69) Loosen concurrent-ruby dependency
+
+5.0.2
+-----
+- [63](https://github.com/Shopify/graphql-metrics/pull/67) Reset `lex` pre-context metrics on `analyze_multiplex`.
 5.0.1
 -----
 - [63](https://github.com/Shopify/graphql-metrics/pull/63) Eliminate `TimedResult` objects for `trace_field`.

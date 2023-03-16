@@ -202,10 +202,16 @@ module GraphQL
         ]
 
         assert_equal_with_diff_on_failure(
-          [{ directive_name: 'customDirective' }, { directive_name: 'skip' }],
-          actual_directives.sort_by { |h| h[:directive_name] }
+          [{ directive_name: 'skip' }, { directive_name: 'customDirective' }],
+          actual_directives,
+          sort_by: ->(x) { x[:directive_name] }
         )
-        assert_equal_with_diff_on_failure(expected_arguments.sort_by { |h| h[:argument_name] }, actual_arguments.sort_by { |h| h[:argument_name] })
+
+        assert_equal_with_diff_on_failure(
+          expected_arguments,
+          actual_arguments,
+          sort_by: ->(x) { x[:argument_name] }
+        )
       end
 
       test 'extracts metrics from directives on MUTATION location' do
@@ -312,7 +318,7 @@ module GraphQL
             }
           ]
         assert_equal_with_diff_on_failure([{ directive_name: 'customDirective' }], actual_directives)
-        assert_equal_with_diff_on_failure(expected_arguments.sort_by { |h| h[:argument_name] }, actual_arguments.sort_by { |h| h[:argument_name] })
+        assert_equal_with_diff_on_failure(expected_arguments, actual_arguments, sort_by: ->(x) { x[:argument_name] })
       end
 
       test 'extracts metrics from directives on QUERY and FIELD location for document with fragment' do
@@ -389,10 +395,15 @@ module GraphQL
         ]
 
         assert_equal_with_diff_on_failure(
-          [{ directive_name: 'customDirective' }, { directive_name: 'skip' }],
-          actual_directives.sort_by { |h| h[:directive_name] }
+          [{ directive_name: 'skip' }, { directive_name: 'customDirective' }],
+          actual_directives,
+          sort_by: -> (x) { x[:directive_name] }
         )
-        assert_equal_with_diff_on_failure(expected_arguments.sort_by { |h| h[:argument_name] }, actual_arguments.sort_by { |h| h[:argument_name] })
+        assert_equal_with_diff_on_failure(
+          expected_arguments,
+          actual_arguments,
+          sort_by: -> (x) { x[:argument_name] }
+        )
       end
 
       test 'extracts metrics from queries, as well as their fields and arguments (when using Schema.execute)' do
@@ -482,6 +493,38 @@ module GraphQL
         assert_equal_with_diff_on_failure(expected_queries, actual_queries)
         assert_equal_with_diff_on_failure(kitchen_sink_expected_fields, actual_fields)
         assert_equal_with_diff_on_failure(kitchen_sink_expected_arguments, actual_arguments)
+      end
+
+      test 'parsing metrics are properly reset when a second query is initialized with a document' do
+        first_query_context = {}
+
+        GraphQL::Query.new(
+          SchemaWithFullMetrics,
+          kitchen_sink_query_document,
+          variables: { 'postId': '1', 'titleUpcase': true },
+          operation_name: 'PostDetails',
+          context: first_query_context,
+        ).result
+
+        first_query_result = first_query_context[:simple_extractor_results][:queries][0]
+
+        second_query_context = {}
+
+        GraphQL::Query.new(
+          SchemaWithFullMetrics,
+          nil,
+          document: GraphQL.parse(kitchen_sink_query_document),
+          variables: { 'postId': '1', 'titleUpcase': true },
+          operation_name: 'PostDetails',
+          context: second_query_context,
+        ).result
+
+        second_query_result = second_query_context[:simple_extractor_results][:queries][0]
+
+        assert(first_query_result[:lexing_start_time_offset] < second_query_result[:lexing_start_time_offset])
+        assert(first_query_result[:parsing_start_time_offset] < second_query_result[:parsing_start_time_offset])
+        assert_equal(0.0, second_query_result[:lexing_duration])
+        assert_equal(0.0, second_query_result[:parsing_duration])
       end
 
       test 'GraphQL::Querys executed in the same thread have increasing `multiplex_start_time`s (regression test; see below)' do
@@ -1353,10 +1396,10 @@ module GraphQL
 
       private
 
-      def assert_equal_with_diff_on_failure(expected, actual)
+      def assert_equal_with_diff_on_failure(expected, actual, sort_by: ->(_x) {} )
         assert_equal(
-          expected,
-          actual,
+          expected.sort_by(&sort_by),
+          actual.sort_by(&sort_by),
           Diffy::Diff.new(JSON.pretty_generate(expected), JSON.pretty_generate(actual))
         )
       end
