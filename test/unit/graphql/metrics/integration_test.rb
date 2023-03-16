@@ -406,6 +406,71 @@ module GraphQL
         )
       end
 
+      test 'extracts metrics from directives on FIELD location for document with inline fragment with directive' do
+        context = {}
+        query = GraphQL::Query.new(
+          SchemaWithFullMetrics,
+          query_document_with_inline_fragment_with_directive,
+          variables: { 'postId': "1" },
+          operation_name: 'PostDetails',
+          context: context
+        )
+        result = query.result.to_h
+
+        refute result['errors'].present?
+        assert result['data'].present?
+
+        results = context[:simple_extractor_results]
+
+        actual_directives = results[:directives]
+        actual_arguments = results[:arguments]
+
+        expected_arguments = [
+          {
+            argument_name: "if",
+            argument_type_name: "Boolean",
+            parent_name: "skip",
+            grandparent_type_name: "__Directive",
+            grandparent_node_name: nil,
+            parent_input_object_type: nil,
+            default_used: false,
+            value_is_null: false,
+            value: SomeArgumentValue.new,
+          }, {
+            argument_name: "id",
+            argument_type_name: "ID",
+            parent_name: "post",
+            grandparent_type_name: "QueryRoot",
+            grandparent_node_name: "query",
+            parent_input_object_type: nil,
+            default_used: false,
+            value_is_null: false,
+            value: SomeArgumentValue.new,
+          }, {
+            argument_name: "locale",
+            argument_type_name: "String",
+            parent_name: "post",
+            grandparent_type_name: "QueryRoot",
+            grandparent_node_name: "query",
+            parent_input_object_type: nil,
+            default_used: true,
+            value_is_null: false,
+            value: SomeArgumentValue.new,
+          }
+        ]
+
+        assert_equal_with_diff_on_failure(
+          [{ directive_name: 'skip' }],
+          actual_directives,
+          sort_by: -> (x) { x[:directive_name] }
+        )
+        assert_equal_with_diff_on_failure(
+          expected_arguments,
+          actual_arguments,
+          sort_by: -> (x) { x[:argument_name] }
+        )
+      end
+
       test 'extracts metrics from queries, as well as their fields and arguments (when using Schema.execute)' do
         context = {}
         result = SchemaWithFullMetrics.execute(
@@ -1766,6 +1831,19 @@ module GraphQL
               ... on Post {
                 id @skip(if: true)
                 title(upcase: $titleUpcase)
+              }
+            }
+          }
+        GRAPHQL
+      end
+
+      def query_document_with_inline_fragment_with_directive
+        <<~GRAPHQL
+          query PostDetails($postId: ID!) {
+            post(id: $postId) {
+              __typename # Ignored
+              ... @skip(if: true) {
+                id
               }
             }
           }
