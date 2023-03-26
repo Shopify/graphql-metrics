@@ -175,7 +175,7 @@ module GraphQL
         when GraphQL::Language::Nodes::OperationDefinition
           parent.operation_type
         when GraphQL::Language::Nodes::InlineFragment
-          parent.type.name
+          parent&.type&.name
         else
           parent.name
         end
