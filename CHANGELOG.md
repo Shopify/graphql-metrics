@@ -1,5 +1,9 @@
+5.0.4
+-----
+- [71](https://github.com/Shopify/graphql-metrics/pull/71) Fix handling of inline fragment without a parent type.
+
 5.0.3
-=====
+-----
 - [69](https://github.com/Shopify/graphql-metrics/pull/69) Loosen concurrent-ruby dependency
 
 5.0.2
