@@ -15,58 +15,57 @@ module GraphQL
       # multiplexing multiple queries.
 
       # wraps everything below this line; only run once
-      def execute_multiplex(multiplex:, &block)
-        return yield if @skip_tracing
-        capture_multiplex_start_time(&block)
-
+      def execute_multiplex(multiplex:)
+        return super if @skip_tracing
+        capture_multiplex_start_time { super }
       end
 
       # may not trigger if the query is passed in pre-parsed
-      def lex(query_string:, &block)
-        return yield if @skip_tracing
-        capture_lexing_time(&block)
+      def lex(query_string:)
+        return super if @skip_tracing
+        capture_lexing_time { super }
       end
 
       # may not trigger if the query is passed in pre-parsed
-      def parse(query_string:, &block)
-        return yield if @skip_tracing
-        capture_parsing_time(&block)
+      def parse(query_string:)
+        return super if @skip_tracing
+        capture_parsing_time { super }
       end
 
-      def validate(query:, validate:, &block)
-        return yield if @skip_tracing
-        capture_validation_time(query.context, &block)
+      def validate(query:, validate:)
+        return super if @skip_tracing
+        capture_validation_time(query.context) { super }
       end
 
       # wraps all `analyze_query`s; only run once
-      def analyze_multiplex(multiplex:, &block)
-        return yield if @skip_tracing
+      def analyze_multiplex(multiplex:)
+        return super if @skip_tracing
         # Ensures that we reset potentially long-lived PreContext objects between multiplexs. We reset at this point
         # since all parsing and validation will be done by this point, and a GraphQL::Query::Context will exist.
         pre_context.reset
-        yield
+        super
       end
 
-      def analyze_query(query:, &block)
-        return yield if @skip_tracing
-        capture_analysis_time(query.context, &block)
+      def analyze_query(query:)
+        return super if @skip_tracing
+        capture_analysis_time(query.context) { super }
       end
 
-      def execute_query(query:, &block)
-        return yield if @skip_tracing
-        capture_query_start_time(query.context, &block)
+      def execute_query(query:)
+        return super if @skip_tracing
+        capture_query_start_time(query.context) { super }
       end
 
-      def execute_field(field:, query:, ast_node:, arguments:, object:, &block)
-        return yield if @skip_tracing || query.context[SKIP_FIELD_AND_ARGUMENT_METRICS]
-        return yield unless GraphQL::Metrics.timings_capture_enabled?(query.context)
-        trace_field(GraphQL::Metrics::INLINE_FIELD_TIMINGS, query, &block)
+      def execute_field(field:, query:, ast_node:, arguments:, object:)
+        return super if @skip_tracing || query.context[SKIP_FIELD_AND_ARGUMENT_METRICS]
+        return super unless GraphQL::Metrics.timings_capture_enabled?(query.context)
+        trace_field(GraphQL::Metrics::INLINE_FIELD_TIMINGS, query) { super }
       end
 
-      def execute_field_lazy(field:, query:, ast_node:, arguments:, object:, &block)
-        return yield if @skip_tracing || query.context[SKIP_FIELD_AND_ARGUMENT_METRICS]
-        return yield unless GraphQL::Metrics.timings_capture_enabled?(query.context)
-        trace_field(GraphQL::Metrics::LAZY_FIELD_TIMINGS, query, &block)
+      def execute_field_lazy(field:, query:, ast_node:, arguments:, object:)
+        return super if @skip_tracing || query.context[SKIP_FIELD_AND_ARGUMENT_METRICS]
+        return super unless GraphQL::Metrics.timings_capture_enabled?(query.context)
+        trace_field(GraphQL::Metrics::LAZY_FIELD_TIMINGS, query) { super }
       end
 
       private
