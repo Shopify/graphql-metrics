@@ -76,6 +76,13 @@ if GraphQL::Schema.respond_to?(:trace_with)
           end
         end
 
+        module TestTrace
+          def execute_multiplex(multiplex:)
+            multiplex.context[:test_trace_was_executed] = true
+            super
+          end
+        end
+
         class SchemaWithFullMetrics < GraphQL::Schema
           query QueryRoot
           mutation MutationRoot
@@ -85,12 +92,26 @@ if GraphQL::Schema.respond_to?(:trace_with)
 
           instrument :query, GraphQL::Metrics::Instrumentation.new
           query_analyzer SimpleAnalyzer
+          trace_with TestTrace
           trace_with GraphQL::Metrics::Trace
 
           def self.parse_error(err, _context)
             return if err.is_a?(GraphQL::ParseError)
             raise err
           end
+        end
+
+        test "it doesn't short-circuit other traces" do
+          context = {}
+          query = GraphQL::Query.new(
+            SchemaWithFullMetrics,
+            kitchen_sink_query_document,
+            variables: { 'postId': '1', 'titleUpcase': true },
+            operation_name: 'PostDetails',
+            context: context
+          )
+          result = query.result.to_h
+          assert query.multiplex.context[:test_trace_was_executed]
         end
 
         test 'extracts metrics from queries, as well as their fields and arguments (when using Query#result)' do
