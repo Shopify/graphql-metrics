@@ -1,5 +1,10 @@
+5.0.5
+-----
+- [73](https://github.com/Shopify/graphql-metrics/pull/73) Fix calls to other traces.
+
 5.0.4
 -----
+- [66](https://github.com/Shopify/graphql-metrics/pull/66) Support graphql-ruby's new tracing API (backwards compatible)
 - [71](https://github.com/Shopify/graphql-metrics/pull/71) Fix handling of inline fragment without a parent type.
 
 5.0.3
