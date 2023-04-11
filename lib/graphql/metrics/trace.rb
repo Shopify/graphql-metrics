@@ -5,8 +5,9 @@ module GraphQL
     module Trace
       def initialize(**_rest)
         super
-        context = (@multiplex || @query).context
-        @skip_tracing = context&.fetch(GraphQL::Metrics::SKIP_GRAPHQL_METRICS_ANALYSIS, false)
+
+        query_or_multiplex = @query || @multiplex
+        @skip_tracing = query_or_multiplex.context&.fetch(SKIP_GRAPHQL_METRICS_ANALYSIS, false) if query_or_multiplex
       end
 
       # NOTE: These methods come from the graphql ruby gem and are in "chronological" order based on the phases
@@ -16,7 +17,7 @@ module GraphQL
 
       # wraps everything below this line; only run once
       def execute_multiplex(multiplex:)
-        return super if @skip_tracing
+        return super if skip_tracing?(multiplex)
         capture_multiplex_start_time { super }
       end
 
@@ -33,13 +34,13 @@ module GraphQL
       end
 
       def validate(query:, validate:)
-        return super if @skip_tracing
+        return super if skip_tracing?(query)
         capture_validation_time(query.context) { super }
       end
 
       # wraps all `analyze_query`s; only run once
       def analyze_multiplex(multiplex:)
-        return super if @skip_tracing
+        return super if skip_tracing?(multiplex)
         # Ensures that we reset potentially long-lived PreContext objects between multiplexs. We reset at this point
         # since all parsing and validation will be done by this point, and a GraphQL::Query::Context will exist.
         pre_context.reset
@@ -47,28 +48,36 @@ module GraphQL
       end
 
       def analyze_query(query:)
-        return super if @skip_tracing
+        return super if skip_tracing?(query)
         capture_analysis_time(query.context) { super }
       end
 
       def execute_query(query:)
-        return super if @skip_tracing
+        return super if skip_tracing?(query)
         capture_query_start_time(query.context) { super }
       end
 
       def execute_field(field:, query:, ast_node:, arguments:, object:)
-        return super if @skip_tracing || query.context[SKIP_FIELD_AND_ARGUMENT_METRICS]
+        return super if skip_tracing?(query) || query.context[SKIP_FIELD_AND_ARGUMENT_METRICS]
         return super unless GraphQL::Metrics.timings_capture_enabled?(query.context)
         trace_field(GraphQL::Metrics::INLINE_FIELD_TIMINGS, query) { super }
       end
 
       def execute_field_lazy(field:, query:, ast_node:, arguments:, object:)
-        return super if @skip_tracing || query.context[SKIP_FIELD_AND_ARGUMENT_METRICS]
+        return super if skip_tracing?(query) || query.context[SKIP_FIELD_AND_ARGUMENT_METRICS]
         return super unless GraphQL::Metrics.timings_capture_enabled?(query.context)
         trace_field(GraphQL::Metrics::LAZY_FIELD_TIMINGS, query) { super }
       end
 
       private
+
+      def skip_tracing?(query_or_multiplex)
+        if !defined?(@skip_tracing)
+          @skip_tracing = query_or_multiplex.context&.fetch(SKIP_GRAPHQL_METRICS_ANALYSIS, false)
+        end
+
+        @skip_tracing
+      end
 
       PreContext = Struct.new(
         :multiplex_start_time,

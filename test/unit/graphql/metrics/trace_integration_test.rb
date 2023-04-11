@@ -114,6 +114,20 @@ if GraphQL::Schema.respond_to?(:trace_with)
           assert query.multiplex.context[:test_trace_was_executed]
         end
 
+        test "tracing is skipped when the skip context key is set" do
+          query = GraphQL::Query.new(
+            SchemaWithFullMetrics,
+            kitchen_sink_query_document,
+            variables: { 'postId': '1', 'titleUpcase': true },
+            operation_name: 'PostDetails',
+            context: { SKIP_GRAPHQL_METRICS_ANALYSIS => true }
+          )
+          result = query.result.to_h
+
+          assert_nil query.multiplex.context.namespace(CONTEXT_NAMESPACE)[QUERY_START_TIME]
+          assert_nil query.multiplex.context.namespace(CONTEXT_NAMESPACE)[LEXING_DURATION]
+        end
+
         test 'extracts metrics from queries, as well as their fields and arguments (when using Query#result)' do
           context = {}
           query = GraphQL::Query.new(
