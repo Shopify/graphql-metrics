@@ -1,3 +1,7 @@
+5.0.6
+-----
+- [74](https://github.com/Shopify/graphql-metrics/pull/74) Fix skip_tracing compatibility with new Tracing API
+
 5.0.5
 -----
 - [73](https://github.com/Shopify/graphql-metrics/pull/73) Fix calls to other traces.
