@@ -1,3 +1,7 @@
+5.0.7
+-----
+- [75](https://github.com/Shopify/graphql-metrics/pull/75) Trace: capture path before yielding
+
 5.0.6
 -----
 - [74](https://github.com/Shopify/graphql-metrics/pull/74) Fix skip_tracing compatibility with new Tracing API
