@@ -181,13 +181,14 @@ module GraphQL
         ns = query.context.namespace(CONTEXT_NAMESPACE)
         offset_time = ns[GraphQL::Metrics::QUERY_START_TIME_MONOTONIC]
         start_time = GraphQL::Metrics.current_time_monotonic
+        path = query.context[:current_path]
 
         result = yield
 
         duration = GraphQL::Metrics.current_time_monotonic - start_time
         time_since_offset = start_time - offset_time if offset_time
 
-        path_excluding_numeric_indicies = query.context[:current_path].select { |p| p.is_a?(String) }
+        path_excluding_numeric_indicies = path.select { |p| p.is_a?(String) }
         ns[context_key][path_excluding_numeric_indicies] ||= []
         ns[context_key][path_excluding_numeric_indicies] << {
           start_time_offset: time_since_offset, duration: duration
