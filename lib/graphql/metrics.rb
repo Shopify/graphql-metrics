@@ -51,8 +51,12 @@ module GraphQL
       Process.clock_gettime(Process::CLOCK_MONOTONIC)
     end
 
-    def self.time(*args)
-      TimedResult.new(*args) { yield }
+    def self.time(offset_time = nil)
+      start_time = current_time_monotonic
+      result = yield
+      duration = current_time_monotonic - start_time
+      time_since_offset = start_time - offset_time if offset_time
+      TimedResult.new(start_time, duration, time_since_offset, result)
     end
 
     class TimedResult
@@ -75,12 +79,11 @@ module GraphQL
       #
       attr_reader :result, :start_time, :duration, :time_since_offset
 
-      def initialize(offset_time = nil)
-        @offset_time = offset_time
-        @start_time = GraphQL::Metrics.current_time_monotonic
-        @result = yield
-        @duration = GraphQL::Metrics.current_time_monotonic - @start_time
-        @time_since_offset = @start_time - @offset_time if @offset_time
+      def initialize(start_time, duration, time_since_offset, result)
+        @start_time = start_time
+        @duration = duration
+        @time_since_offset = time_since_offset
+        @result = result
       end
     end
   end
