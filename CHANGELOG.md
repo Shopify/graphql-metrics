@@ -1,3 +1,7 @@
+5.0.8
+-----
+- [76](https://github.com/Shopify/graphql-metrics/pull/76) Reduce object allocations
+
 5.0.7
 -----
 - [75](https://github.com/Shopify/graphql-metrics/pull/75) Trace: capture path before yielding
