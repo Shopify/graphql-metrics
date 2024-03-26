@@ -7,5 +7,4 @@
 /spec/reports/
 /tmp/
 *.gem
-Gemfile.lock
 /vendor/
