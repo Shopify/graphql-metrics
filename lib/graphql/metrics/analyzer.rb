@@ -3,103 +3,78 @@
 module GraphQL
   module Metrics
     class Analyzer < GraphQL::Analysis::AST::Analyzer
-      attr_reader :query
       DIRECTIVE_TYPE = "__Directive"
+      private_constant :DIRECTIVE_TYPE
 
       def initialize(query_or_multiplex)
         super
 
         @query = query_or_multiplex
-        ns = query.context.namespace(CONTEXT_NAMESPACE)
-        ns[ANALYZER_INSTANCE_KEY] = self
+        @ns = query.context.namespace(CONTEXT_NAMESPACE)
 
-        @static_query_metrics = nil
-        @static_field_metrics = []
+        @query_metrics = nil
+        @field_metrics = {}
+        @argument_metrics = []
+        @directive_metrics = []
       end
 
       def analyze?
         query.valid? && !query.context[GraphQL::Metrics::SKIP_GRAPHQL_METRICS_ANALYSIS]
       end
 
-      def extract_query(runtime_query_metrics: {})
-        query_extracted(@static_query_metrics.merge(runtime_query_metrics)) if @static_query_metrics
+      def result
+        @ns[:query_metrics] = @query_metrics
+        @ns[:field_metrics] = @field_metrics
+        @ns[:argument_metrics] = @argument_metrics
+        @ns[:directive_metrics] = @directive_metrics
       end
 
       def on_enter_operation_definition(_node, _parent, visitor)
-        @static_query_metrics = {
+        @query_metrics = {
           operation_type: visitor.query.selected_operation.operation_type,
           operation_name: visitor.query.selected_operation.name,
         }
       end
 
       def on_leave_field(node, parent, visitor)
-        return if visitor.field_definition.introspection?
         return if query.context[SKIP_FIELD_AND_ARGUMENT_METRICS]
 
-        argument_values = arguments_for(node, visitor.field_definition)
+        field_defn = visitor.field_definition
+        return if field_defn.introspection?
+
+        argument_values = arguments_for(node, field_defn)
+
         extract_arguments(
           argument: argument_values,
-          definition: visitor.field_definition,
+          definition: field_defn,
           parent: parent
         ) if argument_values
 
-        static_metrics = {
+        return if @field_metrics.key?(field_defn.path)
+
+        @field_metrics[field_defn.path] = {
           field_name: node.name,
           return_type_name: visitor.type_definition.graphql_name,
           parent_type_name: visitor.parent_type_definition.graphql_name,
-          deprecated: !visitor.field_definition.deprecation_reason.nil?,
-          path: visitor.response_path,
+          deprecated: !field_defn.deprecation_reason.nil?,
         }
-
-        if GraphQL::Metrics.timings_capture_enabled?(query.context)
-          @static_field_metrics << static_metrics
-        else
-          field_extracted(static_metrics)
-        end
-      end
-
-      def extract_fields(with_runtime_metrics: true)
-        return if query.context[SKIP_FIELD_AND_ARGUMENT_METRICS]
-
-        ns = query.context.namespace(CONTEXT_NAMESPACE)
-
-        @static_field_metrics.each do |static_metrics|
-
-          if with_runtime_metrics
-            resolver_timings = ns[GraphQL::Metrics::INLINE_FIELD_TIMINGS][static_metrics[:path]]
-            lazy_resolver_timings = ns[GraphQL::Metrics::LAZY_FIELD_TIMINGS][static_metrics[:path]]
-
-            static_metrics[:resolver_timings] = resolver_timings || []
-            static_metrics[:lazy_resolver_timings] = lazy_resolver_timings || []
-          end
-
-          field_extracted(static_metrics)
-        end
       end
 
       def on_enter_directive(node, parent, visitor)
         argument_values = arguments_for(node, visitor.directive_definition)
+
         extract_arguments(
           argument: argument_values,
           definition: visitor.directive_definition,
           parent: parent
         ) if argument_values
 
-        directive_extracted({ directive_name: node.name })
-      end
-
-      def result
-        return if GraphQL::Metrics.timings_capture_enabled?(query.context)
-        return if query.context[GraphQL::Metrics::SKIP_GRAPHQL_METRICS_ANALYSIS]
-
-        # NOTE: If we're running as a static analyzer (i.e. not with instrumentation and tracing), we still need to
-        # flush static query metrics somewhere other than `after_query`.
-        ns = query.context.namespace(CONTEXT_NAMESPACE)
-        analyzer = ns[GraphQL::Metrics::ANALYZER_INSTANCE_KEY]
-        analyzer.extract_query
+        @directive_metrics << { directive_name: node.name }
       end
 
       private
+
+      attr_reader :query
 
       def arguments_for(node, definition)
         # Arguments can raise execution errors within their `prepare` methods
@@ -145,6 +120,7 @@ module GraphQL
             parent_input_object: parent_input_object,
             parent: parent
           )
+
           extract_arguments(
             argument:argument.value,
             definition: definition,
@@ -180,7 +156,7 @@ module GraphQL
           parent.name
         end
 
-        static_metrics = {
+        @argument_metrics << {
           argument_name: value.definition.graphql_name,
           argument_type_name: value.definition.type.unwrap.graphql_name,
           parent_name: definition.graphql_name,
@@ -191,8 +167,6 @@ module GraphQL
           value_is_null: value.value.nil?,
           value: value,
         }
-
-        argument_extracted(static_metrics)
       end
     end
   end
