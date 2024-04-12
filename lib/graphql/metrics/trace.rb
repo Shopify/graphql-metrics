@@ -3,11 +3,19 @@
 module GraphQL
   module Metrics
     module Trace
+      PreContext = Struct.new(
+        :multiplex_start_time,
+        :multiplex_start_time_monotonic,
+        :parsing_start_time_offset,
+        :parsing_duration,
+      )
+
       def initialize(**_rest)
         super
 
         query_or_multiplex = @query || @multiplex
         @skip_tracing = query_or_multiplex.context&.fetch(SKIP_GRAPHQL_METRICS_ANALYSIS, false) if query_or_multiplex
+        @pre_context = PreContext.new
       end
 
       # NOTE: These methods come from the graphql ruby gem and are in "chronological" order based on the phases
@@ -19,12 +27,6 @@ module GraphQL
       def execute_multiplex(multiplex:)
         return super if skip_tracing?(multiplex)
         capture_multiplex_start_time { super }
-      end
-
-      # may not trigger if the query is passed in pre-parsed
-      def lex(query_string:)
-        return super if @skip_tracing
-        capture_lexing_time { super }
       end
 
       # may not trigger if the query is passed in pre-parsed
@@ -41,9 +43,6 @@ module GraphQL
       # wraps all `analyze_query`s; only run once
       def analyze_multiplex(multiplex:)
         return super if skip_tracing?(multiplex)
-        # Ensures that we reset potentially long-lived PreContext objects between multiplexs. We reset at this point
-        # since all parsing and validation will be done by this point, and a GraphQL::Query::Context will exist.
-        pre_context.reset
         super
       end
 
@@ -71,6 +70,8 @@ module GraphQL
 
       private
 
+      attr_reader :pre_context
+
       def skip_tracing?(query_or_multiplex)
         if !defined?(@skip_tracing)
           @skip_tracing = query_or_multiplex.context&.fetch(SKIP_GRAPHQL_METRICS_ANALYSIS, false)
@@ -79,45 +80,16 @@ module GraphQL
         @skip_tracing
       end
 
-      PreContext = Struct.new(
-        :multiplex_start_time,
-        :multiplex_start_time_monotonic,
-        :parsing_start_time_offset,
-        :parsing_duration,
-        :lexing_start_time_offset,
-        :lexing_duration
-      ) do
-        def reset
-          self[:multiplex_start_time] = nil
-          self[:multiplex_start_time_monotonic] = nil
-          self[:parsing_start_time_offset] = nil
-          self[:parsing_duration] = nil
-          self[:lexing_start_time_offset] = nil
-          self[:lexing_duration] = nil
-        end
-      end
-
-      def pre_context
-        # NOTE: This is used to store timings from lexing, parsing, validation, before we have a context to store
-        # values in. Uses thread-safe Concurrent::ThreadLocalVar to store a set of values per thread.
-        @pre_context ||= Concurrent::ThreadLocalVar.new(PreContext.new)
-        @pre_context.value
-      end
-
       def capture_multiplex_start_time
         pre_context.multiplex_start_time = GraphQL::Metrics.current_time
         pre_context.multiplex_start_time_monotonic = GraphQL::Metrics.current_time_monotonic
 
+        # Set sane default values for parsing in case parsing is done manually
+        # If the `parse` tracing hook fires, these will be replaced by real values
+        pre_context.parsing_start_time_offset = pre_context.multiplex_start_time
+        pre_context.parsing_duration = 0.0
+
         yield
-      end
-
-      def capture_lexing_time
-        timed_result = GraphQL::Metrics.time { yield }
-
-        pre_context.lexing_start_time_offset = timed_result.start_time
-        pre_context.lexing_duration = timed_result.duration
-
-        timed_result.result
       end
 
       def capture_parsing_time
@@ -131,25 +103,12 @@ module GraphQL
 
       # Also consolidates parsing timings (if any) from the `pre_context`
       def capture_validation_time(context)
-        # Queries may already be lexed and parsed before execution (whether a single query or multiplex).
-        # If we don't have those values, use some sane defaults.
-        if [nil, 0].include?(pre_context.lexing_duration)
-          pre_context.lexing_start_time_offset = pre_context.multiplex_start_time
-          pre_context.lexing_duration = 0.0
-        end
-        if pre_context.parsing_duration.nil?
-          pre_context.parsing_start_time_offset = pre_context.multiplex_start_time
-          pre_context.parsing_duration = 0.0
-        end
-
         timed_result = GraphQL::Metrics.time(pre_context.multiplex_start_time_monotonic) { yield }
 
         ns = context.namespace(CONTEXT_NAMESPACE)
 
         ns[MULTIPLEX_START_TIME] = pre_context.multiplex_start_time
         ns[MULTIPLEX_START_TIME_MONOTONIC] = pre_context.multiplex_start_time_monotonic
-        ns[LEXING_START_TIME_OFFSET] = pre_context.lexing_start_time_offset
-        ns[LEXING_DURATION] = pre_context.lexing_duration
         ns[PARSING_START_TIME_OFFSET] = pre_context.parsing_start_time_offset
         ns[PARSING_DURATION] = pre_context.parsing_duration
         ns[VALIDATION_START_TIME_OFFSET] = timed_result.time_since_offset

@@ -4,8 +4,8 @@ require "concurrent"
 require "graphql/metrics/version"
 require "graphql/metrics/instrumentation"
 require "graphql/metrics/trace"
-require "graphql/metrics/tracer"
 require "graphql/metrics/analyzer"
+require "graphql/metrics/processor"
 
 module GraphQL
   module Metrics
@@ -20,15 +20,12 @@ module GraphQL
 
     # Timings related constants.
     TIMINGS_CAPTURE_ENABLED = :timings_capture_enabled
-    ANALYZER_INSTANCE_KEY = :analyzer_instance
 
     # Context keys to store timings for query phases of execution, field resolver timings.
     MULTIPLEX_START_TIME = :multiplex_start_time
     MULTIPLEX_START_TIME_MONOTONIC = :multiplex_start_time_monotonic
     QUERY_START_TIME = :query_start_time
     QUERY_START_TIME_MONOTONIC = :query_start_time_monotonic
-    LEXING_START_TIME_OFFSET = :lexing_start_time_offset
-    LEXING_DURATION = :lexing_duration
     PARSING_START_TIME_OFFSET = :parsing_start_time_offset
     PARSING_DURATION = :parsing_duration
     VALIDATION_START_TIME_OFFSET = :validation_start_time_offset
@@ -57,6 +54,19 @@ module GraphQL
       duration = current_time_monotonic - start_time
       time_since_offset = start_time - offset_time if offset_time
       TimedResult.new(start_time, duration, time_since_offset, result)
+    end
+
+    def self.use(
+      schema_defn,
+      processor_class:,
+      capture_timings: false,
+      analyzer_class: GraphQL::Metrics::Analyzer,
+      tracer: GraphQL::Metrics::Trace,
+      trace_mode: :default
+    )
+      schema_defn.query_analyzer(analyzer_class)
+      schema_defn.trace_with(GraphQL::Metrics::Instrumentation, processor_class: processor_class)
+      schema_defn.trace_with(tracer, mode: trace_mode) if capture_timings
     end
 
     class TimedResult
