@@ -3,11 +3,15 @@
 require "test_helper"
 require "test_schema"
 
+require 'support/parser'
+
 module GraphQL
   module Metrics
     class IntegrationTest < ActiveSupport::TestCase
       REASONABLY_RECENT_UNIX_TIME = 1571337000 # aka 2019-10-17 in Unix time.
       SMALL_NONZERO_NUMBER = Float::EPSILON # aka 2.220446049250313e-16
+
+      include Support::Parser
 
       class SomeNumber
         include Comparable
@@ -1039,7 +1043,7 @@ module GraphQL
             :query_start_time=>SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
             :query_duration=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
             :lexing_start_time_offset=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
-            :lexing_duration=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+            :lexing_duration=>SomeNumber.new(at_least: lexing_duration_for_graphql_version),
             :parsing_start_time_offset=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
             :parsing_duration=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
             :validation_start_time_offset=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
@@ -1478,7 +1482,7 @@ module GraphQL
             :query_start_time=>SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
             :query_duration=>SomeNumber.new(at_least: 2),
             :lexing_start_time_offset=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
-            :lexing_duration=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+            :lexing_duration=>SomeNumber.new(at_least: lexing_duration_for_graphql_version),
             :parsing_start_time_offset=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
             :parsing_duration=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
             :validation_start_time_offset=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
