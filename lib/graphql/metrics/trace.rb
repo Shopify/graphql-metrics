@@ -133,7 +133,7 @@ module GraphQL
       def capture_validation_time(context)
         # Queries may already be lexed and parsed before execution (whether a single query or multiplex).
         # If we don't have those values, use some sane defaults.
-        if pre_context.lexing_duration.nil?
+        if [nil, 0].include?(pre_context.lexing_duration)
           pre_context.lexing_start_time_offset = pre_context.multiplex_start_time
           pre_context.lexing_duration = 0.0
         end
