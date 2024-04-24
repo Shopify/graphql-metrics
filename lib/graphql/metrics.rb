@@ -18,9 +18,6 @@ module GraphQL
     # Skips just field and argument logging, when query metrics logging is still desirable
     SKIP_FIELD_AND_ARGUMENT_METRICS = :skip_field_and_argument_metrics
 
-    # Timings related constants.
-    TIMINGS_CAPTURE_ENABLED = :timings_capture_enabled
-
     # Context keys to store timings for query phases of execution, field resolver timings.
     QUERY_START_TIME = :query_start_time
     QUERY_START_TIME_MONOTONIC = :query_start_time_monotonic
@@ -29,11 +26,6 @@ module GraphQL
     ANALYSIS_DURATION = :analysis_duration
     INLINE_FIELD_TIMINGS = :inline_field_timings
     LAZY_FIELD_TIMINGS = :lazy_field_timings
-
-    def self.timings_capture_enabled?(context)
-      return false unless context
-      !!context.namespace(CONTEXT_NAMESPACE)[TIMINGS_CAPTURE_ENABLED]
-    end
 
     def self.current_time
       Process.clock_gettime(Process::CLOCK_REALTIME)

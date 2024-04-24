@@ -45,13 +45,11 @@ module GraphQL
 
       def execute_field(field:, query:, ast_node:, arguments:, object:)
         return super if @skip_tracing || query.context[SKIP_FIELD_AND_ARGUMENT_METRICS]
-        return super unless GraphQL::Metrics.timings_capture_enabled?(query.context)
         trace_field(GraphQL::Metrics::INLINE_FIELD_TIMINGS, field, query) { super }
       end
 
       def execute_field_lazy(field:, query:, ast_node:, arguments:, object:)
         return super if @skip_tracing || query.context[SKIP_FIELD_AND_ARGUMENT_METRICS]
-        return super unless GraphQL::Metrics.timings_capture_enabled?(query.context)
         trace_field(GraphQL::Metrics::LAZY_FIELD_TIMINGS, field, query) { super }
       end
 

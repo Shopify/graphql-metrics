@@ -16,7 +16,6 @@ module GraphQL
 
         multiplex.queries.each do |query|
           ns = query.context.namespace(CONTEXT_NAMESPACE)
-          ns[GraphQL::Metrics::TIMINGS_CAPTURE_ENABLED] = true
           ns[GraphQL::Metrics::INLINE_FIELD_TIMINGS] = Hash.new { |h, k| h[k] = [] }
           ns[GraphQL::Metrics::LAZY_FIELD_TIMINGS] = Hash.new { |h, k| h[k] = [] }
         end
