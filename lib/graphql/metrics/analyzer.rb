@@ -13,7 +13,7 @@ module GraphQL
         @ns = query.context.namespace(CONTEXT_NAMESPACE)
 
         @query_metrics = nil
-        @field_metrics = []
+        @field_metrics = {}
         @argument_metrics = []
         @directive_metrics = []
       end
@@ -37,22 +37,26 @@ module GraphQL
       end
 
       def on_leave_field(node, parent, visitor)
-        return if visitor.field_definition.introspection?
         return if query.context[SKIP_FIELD_AND_ARGUMENT_METRICS]
 
-        argument_values = arguments_for(node, visitor.field_definition)
+        field_defn = visitor.field_definition
+        return if field_defn.introspection?
+
+        argument_values = arguments_for(node, field_defn)
+
         extract_arguments(
           argument: argument_values,
-          definition: visitor.field_definition,
+          definition: field_defn,
           parent: parent
         ) if argument_values
 
-        @field_metrics << {
+        return if @field_metrics.key?(field_defn.path)
+
+        @field_metrics[field_defn.path] = {
           field_name: node.name,
           return_type_name: visitor.type_definition.graphql_name,
           parent_type_name: visitor.parent_type_definition.graphql_name,
-          deprecated: !visitor.field_definition.deprecation_reason.nil?,
-          path: visitor.response_path,
+          deprecated: !field_defn.deprecation_reason.nil?,
         }
       end
 

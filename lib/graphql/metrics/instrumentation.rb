@@ -16,8 +16,8 @@ module GraphQL
 
         multiplex.queries.each do |query|
           ns = query.context.namespace(CONTEXT_NAMESPACE)
-          ns[GraphQL::Metrics::INLINE_FIELD_TIMINGS] = {}
-          ns[GraphQL::Metrics::LAZY_FIELD_TIMINGS] = {}
+          ns[GraphQL::Metrics::INLINE_FIELD_TIMINGS] = Hash.new { |h, k| h[k] = [] }
+          ns[GraphQL::Metrics::LAZY_FIELD_TIMINGS] = Hash.new { |h, k| h[k] = [] }
         end
 
         begin
@@ -53,12 +53,9 @@ module GraphQL
         query_metrics = ns[:query_metrics].to_h.merge(runtime_query_metrics)
         @processor.query_extracted(query_metrics, query: query)
 
-        ns[:field_metrics].each do |metric|
-          resolver_timings = ns[GraphQL::Metrics::INLINE_FIELD_TIMINGS][metric[:path]]
-          lazy_resolver_timings = ns[GraphQL::Metrics::LAZY_FIELD_TIMINGS][metric[:path]]
-
-          metric[:resolver_timings] = resolver_timings || []
-          metric[:lazy_resolver_timings] = lazy_resolver_timings || []
+        ns[:field_metrics].each do |path, metric|
+          metric[:resolver_timings] = ns[GraphQL::Metrics::INLINE_FIELD_TIMINGS][path]
+          metric[:lazy_resolver_timings] = ns[GraphQL::Metrics::LAZY_FIELD_TIMINGS][path]
 
           @processor.field_extracted(metric, query: query)
         end

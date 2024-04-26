@@ -58,12 +58,12 @@ module GraphQL
 
       def execute_field(field:, query:, ast_node:, arguments:, object:)
         return super if skip_tracing?(query) || query.context[SKIP_FIELD_AND_ARGUMENT_METRICS]
-        trace_field(GraphQL::Metrics::INLINE_FIELD_TIMINGS, query) { super }
+        trace_field(GraphQL::Metrics::INLINE_FIELD_TIMINGS, field, query) { super }
       end
 
       def execute_field_lazy(field:, query:, ast_node:, arguments:, object:)
         return super if skip_tracing?(query) || query.context[SKIP_FIELD_AND_ARGUMENT_METRICS]
-        trace_field(GraphQL::Metrics::LAZY_FIELD_TIMINGS, query) { super }
+        trace_field(GraphQL::Metrics::LAZY_FIELD_TIMINGS, field, query) { super }
       end
 
       private
@@ -134,20 +134,18 @@ module GraphQL
         yield
       end
 
-      def trace_field(context_key, query)
+      def trace_field(context_key, field, query)
         ns = query.context.namespace(CONTEXT_NAMESPACE)
         offset_time = ns[GraphQL::Metrics::QUERY_START_TIME_MONOTONIC]
         start_time = GraphQL::Metrics.current_time_monotonic
-        path = query.context[:current_path]
 
         result = yield
 
         duration = GraphQL::Metrics.current_time_monotonic - start_time
         time_since_offset = start_time - offset_time if offset_time
 
-        path_excluding_numeric_indicies = path.select { |p| p.is_a?(String) }
-        ns[context_key][path_excluding_numeric_indicies] ||= []
-        ns[context_key][path_excluding_numeric_indicies] << {
+        ns[context_key][field.path] ||= []
+        ns[context_key][field.path] << {
           start_time_offset: time_since_offset, duration: duration
         }
 

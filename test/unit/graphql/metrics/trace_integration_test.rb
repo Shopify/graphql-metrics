@@ -593,7 +593,6 @@ if GraphQL::Schema.respond_to?(:trace_with)
             :return_type_name => "ID",
             :parent_type_name => "Post",
             :deprecated => false,
-            :path => ["post", "id"],
             :resolver_timings => [{
               :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
               :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
@@ -604,7 +603,6 @@ if GraphQL::Schema.respond_to?(:trace_with)
             :return_type_name => "String",
             :parent_type_name => "Post",
             :deprecated => false,
-            :path => ["post", "title"],
             :resolver_timings => [{
               :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
               :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
@@ -615,7 +613,6 @@ if GraphQL::Schema.respond_to?(:trace_with)
             :return_type_name => "Post",
             :parent_type_name => "QueryRoot",
             :deprecated => false,
-            :path => ["post"],
             :resolver_timings => [{
               :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
               :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
@@ -821,7 +818,7 @@ if GraphQL::Schema.respond_to?(:trace_with)
           results = context[:simple_extractor_results]
 
           actual_fields = results[:fields]
-          id_field_metric = actual_fields.find { |f| f[:path] == %w(post id) }
+          id_field_metric = actual_fields.find { |f| f[:parent_type_name] == "Post" && f[:field_name] == "id" }
 
           assert_equal [], id_field_metric[:resolver_timings]
         end
@@ -946,7 +943,6 @@ if GraphQL::Schema.respond_to?(:trace_with)
             :return_type_name => "ID",
             :parent_type_name => "Post",
             :deprecated => false,
-            :path => ["postCreate", "post", "id"],
             :resolver_timings => [{
               :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
               :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
@@ -957,7 +953,6 @@ if GraphQL::Schema.respond_to?(:trace_with)
             :return_type_name => "Post",
             :parent_type_name => "PostCreatePayload",
             :deprecated => false,
-            :path => ["postCreate", "post"],
             :resolver_timings => [{
               :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
               :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
@@ -968,7 +963,6 @@ if GraphQL::Schema.respond_to?(:trace_with)
             :return_type_name => "PostCreatePayload",
             :parent_type_name => "MutationRoot",
             :deprecated => false,
-            :path => ["postCreate"],
             :resolver_timings => [{
               :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
               :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
@@ -1168,10 +1162,9 @@ if GraphQL::Schema.respond_to?(:trace_with)
             :return_type_name => "ID",
             :parent_type_name => "Post",
             :deprecated => false,
-            :path => ["post", "id"],
             :resolver_timings => [{
               :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
-              :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
+              :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
             }],
             :lazy_resolver_timings => [],
           }, {
@@ -1179,7 +1172,6 @@ if GraphQL::Schema.respond_to?(:trace_with)
             :return_type_name => "String",
             :parent_type_name => "Post",
             :deprecated => false,
-            :path => ["post", "title"],
             :resolver_timings => [{
               :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
               :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
@@ -1190,7 +1182,6 @@ if GraphQL::Schema.respond_to?(:trace_with)
             :return_type_name => "String",
             :parent_type_name => "Post",
             :deprecated => false,
-            :path => ["post", "ignoredAlias"],
             :resolver_timings => [{
               :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
               :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
@@ -1201,7 +1192,6 @@ if GraphQL::Schema.respond_to?(:trace_with)
             :return_type_name => "String",
             :parent_type_name => "Post",
             :deprecated => true,
-            :path => ["post", "deprecatedBody"],
             :resolver_timings => [{
               :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
               :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
@@ -1212,151 +1202,136 @@ if GraphQL::Schema.respond_to?(:trace_with)
             :return_type_name => "ID",
             :parent_type_name => "Comment",
             :deprecated => false,
-            :path => ["post", "comments", "id"],
-            :resolver_timings => [{
-              :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
-              :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
-            }, {
-              :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
-              :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
-            }],
+            :resolver_timings => [
+              {
+                :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+                :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
+              },
+              {
+                :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+                :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
+              },
+              {
+                :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+                :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
+              },
+              {
+                :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+                :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
+              },
+              {
+                :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+                :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
+              },
+              {
+                :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+                :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
+              },
+              {
+                :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+                :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
+              },
+              {
+                :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+                :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
+              },
+            ],
             :lazy_resolver_timings => [],
           }, {
             :field_name => "body",
             :return_type_name => "String",
             :parent_type_name => "Comment",
             :deprecated => false,
-            :path => ["post", "comments", "body"],
-            :resolver_timings => [{
-              :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
-              :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
-            }, {
-              :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
-              :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
-            }],
-            :lazy_resolver_timings => [],
-          }, {
-            :field_name => "id",
-            :return_type_name => "ID",
-            :parent_type_name => "Comment",
-            :deprecated => false,
-            :path => ["post", "comments", "comments", "id"],
-            :resolver_timings => [{
-              :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
-              :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
-            }, {
-              :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
-              :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
-            }, {
-              :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
-              :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
-            }, {
-              :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
-              :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
-            }],
-            :lazy_resolver_timings => [],
-          }, {
-            :field_name => "body",
-            :return_type_name => "String",
-            :parent_type_name => "Comment",
-            :deprecated => false,
-            :path => ["post", "comments", "comments", "body"],
-            :resolver_timings => [{
-              :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
-              :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
-            }, {
-              :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
-              :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
-            }, {
-              :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
-              :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
-            }, {
-              :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
-              :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
-            }],
+            :resolver_timings => [
+              {
+                :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+                :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
+              },
+              {
+                :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+                :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
+              },
+              {
+                :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+                :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
+              },
+              {
+                :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+                :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
+              },
+              {
+                :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+                :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
+              },
+              {
+                :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+                :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
+              },
+              {
+                :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+                :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
+              },
+              {
+                :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+                :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
+              },
+            ],
             :lazy_resolver_timings => [],
           }, {
             :field_name => "comments",
             :return_type_name => "Comment",
             :parent_type_name => "Comment",
             :deprecated => false,
-            :path => ["post", "comments", "comments"],
-            :resolver_timings => [{
-              :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
-              :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
-            }, {
-              :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
-              :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
-            }],
-            :lazy_resolver_timings => [{
-              :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
-              :duration => SomeNumber.new(at_least: 1)
-            }, {
-              :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
-              :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
-            }]
-          }, {
-            :field_name => "comments",
-            :return_type_name => "Comment",
-            :parent_type_name => "Post",
-            :deprecated => false,
-            :path => ["post", "comments"],
-            :resolver_timings => [{
-              :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
-              :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
-            }],
-            :lazy_resolver_timings => [{
-              :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
-              :duration => SomeNumber.new(at_least: 1)
-            }]
-          }, {
-            :field_name => "id",
-            :return_type_name => "ID",
-            :parent_type_name => "Comment",
-            :deprecated => false,
-            :path => ["post", "otherComments", "id"],
-            :resolver_timings => [{
-              :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
-              :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
-            }, {
-              :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
-              :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
-            }],
-            :lazy_resolver_timings => [],
-          }, {
-            :field_name => "body",
-            :return_type_name => "String",
-            :parent_type_name => "Comment",
-            :deprecated => false,
-            :path => ["post", "otherComments", "body"],
-            :resolver_timings => [{
-              :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
-              :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
-            }, {
-              :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
-              :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
-            }],
-            :lazy_resolver_timings => [],
+            :resolver_timings => [
+              {
+                :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+                :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
+              },
+              {
+                :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+                :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
+              },
+            ],
+            :lazy_resolver_timings => [
+              {
+                :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+                :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
+              },
+              {
+                :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+                :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
+              },
+            ]
           }, {
             :field_name => "comments",
             :return_type_name => "Comment",
             :parent_type_name => "Post",
             :deprecated => false,
-            :path => ["post", "otherComments"],
-            :resolver_timings => [{
-              :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
-              :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
-            }],
-            :lazy_resolver_timings => [{
-              :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
-              :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
-            }]
+            :resolver_timings => [
+              {
+                :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+                :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
+              },
+              {
+                :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+                :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
+              },
+            ],
+            :lazy_resolver_timings => [
+              {
+                :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+                :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
+              },
+              {
+                :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+                :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
+              },
+            ]
           }, {
             :field_name => "post",
             :return_type_name => "Post",
             :parent_type_name => "QueryRoot",
             :deprecated => false,
-            :path => ["post"],
             :resolver_timings => [{
               :start_time_offset => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
               :duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER)
