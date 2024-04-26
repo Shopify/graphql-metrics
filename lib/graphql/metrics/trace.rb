@@ -102,15 +102,11 @@ module GraphQL
       end
 
       def trace_field(context_key, field, query)
+        result, duration = GraphQL::Metrics.time { yield }
+
         ns = query.context.namespace(CONTEXT_NAMESPACE)
-        start_time = GraphQL::Metrics.current_time_monotonic
-
-        result = yield
-
-        duration = GraphQL::Metrics.current_time_monotonic - start_time
-
         ns[context_key][field.path] ||= []
-        ns[context_key][field.path] << { duration: duration }
+        ns[context_key][field.path] << duration
 
         result
       end
