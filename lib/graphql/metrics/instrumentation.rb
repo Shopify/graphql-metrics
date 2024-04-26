@@ -41,13 +41,9 @@ module GraphQL
         runtime_query_metrics = {
           query_start_time: ns[GraphQL::Metrics::QUERY_START_TIME],
           query_duration: query_duration,
-          parsing_start_time_offset: ns[GraphQL::Metrics::PARSING_START_TIME_OFFSET],
           parsing_duration: ns[GraphQL::Metrics::PARSING_DURATION],
-          validation_start_time_offset: ns[GraphQL::Metrics::VALIDATION_START_TIME_OFFSET],
           validation_duration: ns[GraphQL::Metrics::VALIDATION_DURATION],
-          analysis_start_time_offset: ns[GraphQL::Metrics::ANALYSIS_START_TIME_OFFSET],
           analysis_duration: ns[GraphQL::Metrics::ANALYSIS_DURATION],
-          multiplex_start_time: ns[GraphQL::Metrics::MULTIPLEX_START_TIME],
         }
 
         query_metrics = ns[:query_metrics].to_h.merge(runtime_query_metrics)
