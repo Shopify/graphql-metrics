@@ -38,34 +38,18 @@ Or install it yourself as:
 
 ## Usage
 
-Get started by defining your own Analyzer, inheriting from `GraphQL::Metrics::Analyzer`.
-
-The following analyzer demonstrates a simple way to capture commonly used metrics sourced from key parts of your schema
-definition, the query document being served, as well as runtime query and resolver timings. In this toy example, all of
-this data is simply stored on the GraphQL::Query context, under a namespace to avoid collisions with other analyzers
-etc.
+Get started by writing a metrics processor class, inheriting from `GraphQL::Metrics::Processor`.
 
 What you do with these captured metrics is up to you!
 
 **NOTE**: If any non-`graphql-ruby` gem-related exceptions occur in your application during query document
-parsing and validation, **runtime metrics** for queries (like `query_duration`, etc.) as well as field
-resolver timings (like `resolver_timings`, `lazy_resolver_timings`) **may not be present** in the extracted `metrics` hash,
-even if you opt to collect them by using `GraphQL::Metrics::Analyzer` and `GraphQL::Metrics::Tracer`.
+parsing and validation, **runtime metrics** for queries (like `query_duration`) as well as field
+resolver timings (like `resolver_timings`, `lazy_resolver_timings`) **may not be present** in the extracted `metrics` hash.
 
 ### Define your own analyzer subclass
 
 ```ruby
-  class SimpleAnalyzer < GraphQL::Metrics::Analyzer
-    ANALYZER_NAMESPACE = :simple_analyzer_namespace
-
-    def initialize(query_or_multiplex)
-      super
-
-      # `query` is defined on instances of objects inheriting from GraphQL::Metrics::Analyzer
-      ns = query.context.namespace(ANALYZER_NAMESPACE)
-      ns[:simple_extractor_results] = {}
-    end
-
+  class SimpleProcessor < GraphQL::Metrics::Processor
     # @param metrics [Hash] Query metrics, including a few details about the query document itself, as well as runtime
     # timings metrics, intended to be compatible with the Apollo Tracing spec:
     # https://github.com/apollographql/apollo-tracing#response-format
@@ -75,16 +59,14 @@ even if you opt to collect them by using `GraphQL::Metrics::Analyzer` and `Graph
     #   operation_name: "PostDetails",
     #   query_start_time: 1573833076.027327,
     #   query_duration: 2.0207119999686256,
-    #   lexing_duration: 0.0008190000080503523,
     #   parsing_duration: 0.0008190000080503523,
     #   validation_duration: 0.01704599999357015,
     #   analysis_duration: 0.0008190000080503523,
-    #   multiplex_start_time: 0.0008190000080503523,
     # }
     #
     # You can use these metrics to track high-level query performance, along with any other details you wish to
     # manually capture from `query` and/or `query.context`.
-    def query_extracted(metrics)
+    def query_extracted(metric, query:)
       custom_metrics_from_context = {
         request_id: query.context[:request_id],
         # ...
@@ -94,7 +76,7 @@ even if you opt to collect them by using `GraphQL::Metrics::Analyzer` and `Graph
       # log_metrics(:fields, metrics)
       #
       # Or store them on the query context:
-      store_metrics(:queries, metrics.merge(custom_metrics_from_context))
+      store_metrics(query, :queries, metric.merge(custom_metrics_from_context))
     end
 
     # For use after controller:
@@ -123,7 +105,6 @@ even if you opt to collect them by using `GraphQL::Metrics::Analyzer` and `Graph
     #   return_type_name: "ID",
     #   parent_type_name: "Post",
     #   deprecated: false,
-    #   path: ["post", "id"],
     #   resolver_timings: [
     #     5.999987479299307e-06,
     #   ],
@@ -131,16 +112,16 @@ even if you opt to collect them by using `GraphQL::Metrics::Analyzer` and `Graph
     #     5.999987479299307e-06,
     #   ],
     # }
-    def field_extracted(metrics)
-      store_metrics(:fields, metrics)
+    def field_extracted(metrics, query:)
+      store_metrics(query, :fields, metrics)
     end
 
     # @param metrics [Hash] Directive metrics
     # {
     #   directive_name: "customDirective",
     # }
-    def directive_extracted(metrics)
-      store_metrics(:directives, metrics)
+    def directive_extracted(metrics, query:)
+      store_metrics(query, :directives, metrics)
     end
 
     # @param metrics [Hash] Argument usage metrics, including a few details about the query document itself, as well
@@ -158,22 +139,28 @@ even if you opt to collect them by using `GraphQL::Metrics::Analyzer` and `Graph
     #
     # `value` is exposed here, in case you want to get access to the argument's definition, including the type
     # class which defines it, e.g. `metrics[:value].definition.metadata[:type_class]`
-    def argument_extracted(metrics)
-      store_metrics(:arguments, metrics)
+    def argument_extracted(metrics, query:)
+      store_metrics(query, :arguments, metrics)
     end
 
     private
 
-    def store_metrics(context_key, metrics)
-      ns = query.context.namespace(ANALYZER_NAMESPACE)
-      ns[:simple_extractor_results][context_key] ||= []
-      ns[:simple_extractor_results][context_key] << metrics
+    def store_metrics(query, context_key, metrics)
+      query.context[:simple_extractor_results] ||= {
+        queries: [],
+        fields: [],
+        arguments: [],
+        directives: [],
+      }
+
+      query.context[:simple_extractor_results][key] << value
     end
   end
 ```
 
 Once defined, you can opt into capturing all metrics seen above by simply including GraphQL::Metrics as a plugin on your
 schema.
+
 #### Metrics that are captured for arguments for fields and directives
 
 Let's have a query example
@@ -234,43 +221,26 @@ These are some of the arguments that are extracted
 }
 ```
 
-### Make use of your analyzer
-
-Ensure that your schema is using the graphql-ruby 1.9+ `GraphQL::Execution::Interpreter` and `GraphQL::Analysis::AST`
-engine, and then simply add the below `GraphQL::Metrics` plugins.
-
-This opts you in to capturing all static and runtime metrics seen above.
+### Enable metrics on your schema
 
 ```ruby
 class Schema < GraphQL::Schema
   query QueryRoot
   mutation MutationRoot
-
-  query_analyzer SimpleAnalyzer
-
-  instrument :query, GraphQL::Metrics::Instrumentation.new # Both of these are required if either is used.
-  tracer GraphQL::Metrics::Tracer.new                      # <-- Note!
-
-  use GraphQL::Batch # Optional, but highly recommended. See https://github.com/Shopify/graphql-batch/.
+  use GraphQL::Metrics
 end
 ```
 
-### Optionally, only gather static metrics
-
-If you don't care to capture runtime metrics like query and resolver timings, you can use your analyzer a standalone
-analyzer without `GraphQL::Metrics::Instrumentation` and `tracer GraphQL::Metrics::Tracer`, like so:
+To enable all features of the gem including timing metrics, use the `capture_timings` option:
+Optionally, capture timing metrics
 
 ```ruby
 class Schema < GraphQL::Schema
   query QueryRoot
   mutation MutationRoot
-
-  query_analyzer SimpleAnalyzer
+  use GraphQL::Metrics, capture_timings: true
 end
 ```
-
-Your analyzer will still be called with `query_extracted`, `field_extracted`, but with timings metrics omitted.
-`argument_extracted` will work exactly the same, whether instrumentation and tracing are used or not.
 
 ## Order of execution
 
