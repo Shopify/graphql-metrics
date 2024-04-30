@@ -36,37 +36,50 @@ module GraphQL
       def handle_query(query)
         ns = query.context.namespace(CONTEXT_NAMESPACE)
 
-        query_duration = GraphQL::Metrics.current_time_monotonic - ns[GraphQL::Metrics::QUERY_START_TIME_MONOTONIC]
+        query_metrics = ns[:query_metrics].to_h
 
-        runtime_query_metrics = {
-          query_start_time: ns[GraphQL::Metrics::QUERY_START_TIME],
-          query_duration: query_duration,
-          parsing_start_time_offset: ns[GraphQL::Metrics::PARSING_START_TIME_OFFSET],
-          parsing_duration: ns[GraphQL::Metrics::PARSING_DURATION],
-          validation_start_time_offset: ns[GraphQL::Metrics::VALIDATION_START_TIME_OFFSET],
-          validation_duration: ns[GraphQL::Metrics::VALIDATION_DURATION],
-          analysis_start_time_offset: ns[GraphQL::Metrics::ANALYSIS_START_TIME_OFFSET],
-          analysis_duration: ns[GraphQL::Metrics::ANALYSIS_DURATION],
-          multiplex_start_time: ns[GraphQL::Metrics::MULTIPLEX_START_TIME],
-        }
+        unless runtime_metrics_interrupted?(ns)
+          query_duration = GraphQL::Metrics.current_time_monotonic - ns[GraphQL::Metrics::QUERY_START_TIME_MONOTONIC]
 
-        query_metrics = ns[:query_metrics].to_h.merge(runtime_query_metrics)
+          runtime_query_metrics = {
+            query_start_time: ns[GraphQL::Metrics::QUERY_START_TIME],
+            query_duration: query_duration,
+            parsing_duration: ns[GraphQL::Metrics::PARSING_DURATION],
+            validation_duration: ns[GraphQL::Metrics::VALIDATION_DURATION],
+            analysis_duration: ns[GraphQL::Metrics::ANALYSIS_DURATION],
+          }
+
+          query_metrics = ns[:query_metrics].to_h.merge(runtime_query_metrics)
+        end
+
         @processor.query_extracted(query_metrics, query: query)
 
-        ns[:field_metrics].each do |path, metric|
-          metric[:resolver_timings] = ns[GraphQL::Metrics::INLINE_FIELD_TIMINGS][path]
-          metric[:lazy_resolver_timings] = ns[GraphQL::Metrics::LAZY_FIELD_TIMINGS][path]
+        if ns[:field_metrics]
+          ns[:field_metrics].each do |path, metric|
+            unless runtime_metrics_interrupted?(ns)
+              metric[:resolver_timings] = ns[GraphQL::Metrics::INLINE_FIELD_TIMINGS][path]
+              metric[:lazy_resolver_timings] = ns[GraphQL::Metrics::LAZY_FIELD_TIMINGS][path]
+            end
 
-          @processor.field_extracted(metric, query: query)
+            @processor.field_extracted(metric, query: query)
+          end
         end
 
-        ns[:argument_metrics].each do |metric|
-          @processor.argument_extracted(metric, query: query)
+        if ns[:argument_metrics]
+          ns[:argument_metrics].each do |metric|
+            @processor.argument_extracted(metric, query: query)
+          end
         end
 
-        ns[:directive_metrics].each do |metric|
-          @processor.directive_extracted(metric, query: query)
+        if ns[:directive_metrics]
+          ns[:directive_metrics].each do |metric|
+            @processor.directive_extracted(metric, query: query)
+          end
         end
+      end
+
+      def runtime_metrics_interrupted?(context_namespace)
+        context_namespace.key?(GraphQL::Metrics::QUERY_START_TIME_MONOTONIC) == false
       end
     end
   end
