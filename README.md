@@ -48,7 +48,7 @@ etc.
 What you do with these captured metrics is up to you!
 
 **NOTE**: If any non-`graphql-ruby` gem-related exceptions occur in your application during query document
-parsing and validation, **runtime metrics** for queries (like `query_duration`, `parsing_start_time_offset` etc.) as well as field
+parsing and validation, **runtime metrics** for queries (like `query_duration`, etc.) as well as field
 resolver timings (like `resolver_timings`, `lazy_resolver_timings`) **may not be present** in the extracted `metrics` hash,
 even if you opt to collect them by using `GraphQL::Metrics::Analyzer` and `GraphQL::Metrics::Tracer`.
 
@@ -75,13 +75,9 @@ even if you opt to collect them by using `GraphQL::Metrics::Analyzer` and `Graph
     #   operation_name: "PostDetails",
     #   query_start_time: 1573833076.027327,
     #   query_duration: 2.0207119999686256,
-    #   lexing_start_time_offset: 0.0010339999571442604,
     #   lexing_duration: 0.0008190000080503523,
-    #   parsing_start_time_offset: 0.0010339999571442604,
     #   parsing_duration: 0.0008190000080503523,
-    #   validation_start_time_offset: 0.0030819999519735575,
     #   validation_duration: 0.01704599999357015,
-    #   analysis_start_time_offset: 0.0010339999571442604,
     #   analysis_duration: 0.0008190000080503523,
     #   multiplex_start_time: 0.0008190000080503523,
     # }
@@ -129,12 +125,10 @@ even if you opt to collect them by using `GraphQL::Metrics::Analyzer` and `Graph
     #   deprecated: false,
     #   path: ["post", "id"],
     #   resolver_timings: [
-    #     start_time_offset: 0.011901999998372048,
-    #     duration: 5.999987479299307e-06
+    #     5.999987479299307e-06,
     #   ],
     #   lazy_resolver_timings: [
-    #     start_time_offset: 0.031901999998372048,
-    #     duration: 5.999987479299307e-06
+    #     5.999987479299307e-06,
     #   ],
     # }
     def field_extracted(metrics)
