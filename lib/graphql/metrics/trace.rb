@@ -59,13 +59,13 @@ module GraphQL
 
       def execute_field(field:, query:, ast_node:, arguments:, object:)
         return super if skip_tracing?(query) || query.context[SKIP_FIELD_AND_ARGUMENT_METRICS]
-        return super unless GraphQL::Metrics.timings_capture_enabled?(query.context)
+        return super unless capture_field_timings?(query.context)
         trace_field(GraphQL::Metrics::INLINE_FIELD_TIMINGS, query) { super }
       end
 
       def execute_field_lazy(field:, query:, ast_node:, arguments:, object:)
         return super if skip_tracing?(query) || query.context[SKIP_FIELD_AND_ARGUMENT_METRICS]
-        return super unless GraphQL::Metrics.timings_capture_enabled?(query.context)
+        return super unless capture_field_timings?(query.context)
         trace_field(GraphQL::Metrics::LAZY_FIELD_TIMINGS, query) { super }
       end
 
@@ -77,6 +77,16 @@ module GraphQL
         end
 
         @skip_tracing
+      end
+
+      def capture_field_timings?(context)
+        !!context.namespace(CONTEXT_NAMESPACE)[TIMINGS_CAPTURE_ENABLED]
+
+        if !defined?(@capture_field_timings)
+          @capture_field_timings = !!context.namespace(CONTEXT_NAMESPACE)[TIMINGS_CAPTURE_ENABLED]
+        end
+
+        @capture_field_timings
       end
 
       PreContext = Struct.new(

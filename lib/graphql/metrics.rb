@@ -33,11 +33,6 @@ module GraphQL
     INLINE_FIELD_TIMINGS = :inline_field_timings
     LAZY_FIELD_TIMINGS = :lazy_field_timings
 
-    def self.timings_capture_enabled?(context)
-      return false unless context
-      !!context.namespace(CONTEXT_NAMESPACE)[TIMINGS_CAPTURE_ENABLED]
-    end
-
     def self.current_time
       Process.clock_gettime(Process::CLOCK_REALTIME)
     end

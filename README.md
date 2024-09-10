@@ -243,10 +243,9 @@ class Schema < GraphQL::Schema
   query QueryRoot
   mutation MutationRoot
 
-  query_analyzer SimpleAnalyzer
-
   instrument :query, GraphQL::Metrics::Instrumentation.new # Both of these are required if either is used.
   trace_with GraphQL::Metrics::Trace                       # <-- Note!
+  query_analyzer SimpleAnalyzer
 
   use GraphQL::Batch # Optional, but highly recommended. See https://github.com/Shopify/graphql-batch/.
 end
@@ -254,20 +253,33 @@ end
 
 ### Optionally, only gather static metrics
 
-If you don't care to capture runtime metrics like query and resolver timings, you can use your analyzer a standalone
-analyzer without `GraphQL::Metrics::Instrumentation` and `trace_with GraphQL::Metrics::Trace`, like so:
+If you don't care to capture field timings metrics, they can be disabled with the `capture_field_timings` option:
 
 ```ruby
 class Schema < GraphQL::Schema
   query QueryRoot
   mutation MutationRoot
 
+  instrument :query, GraphQL::Metrics::Instrumentation.new(capture_field_timings: false)
   query_analyzer SimpleAnalyzer
+  trace_with GraphQL::Metrics::Trace
 end
 ```
 
 Your analyzer will still be called with `query_extracted`, `field_extracted`, but with timings metrics omitted.
-`argument_extracted` will work exactly the same, whether instrumentation and tracing are used or not.
+`argument_extracted` will work exactly the same.
+
+And if you want to disable tracing metrics entirely, the tracer can be omitted as well:
+
+```ruby
+class Schema < GraphQL::Schema
+  query QueryRoot
+  mutation MutationRoot
+
+  instrument :query, GraphQL::Metrics::Instrumentation.new(capture_field_timings: false)
+  query_analyzer SimpleAnalyzer
+end
+```
 
 ## Order of execution
 
