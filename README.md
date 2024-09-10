@@ -50,7 +50,7 @@ What you do with these captured metrics is up to you!
 **NOTE**: If any non-`graphql-ruby` gem-related exceptions occur in your application during query document
 parsing and validation, **runtime metrics** for queries (like `query_duration`, etc.) as well as field
 resolver timings (like `resolver_timings`, `lazy_resolver_timings`) **may not be present** in the extracted `metrics` hash,
-even if you opt to collect them by using `GraphQL::Metrics::Analyzer` and `GraphQL::Metrics::Tracer`.
+even if you opt to collect them by using `GraphQL::Metrics::Analyzer` and `GraphQL::Metrics::Trace`.
 
 ### Define your own analyzer subclass
 
@@ -236,10 +236,7 @@ These are some of the arguments that are extracted
 
 ### Make use of your analyzer
 
-Ensure that your schema is using the graphql-ruby 1.9+ `GraphQL::Execution::Interpreter` and `GraphQL::Analysis::AST`
-engine, and then simply add the below `GraphQL::Metrics` plugins.
-
-This opts you in to capturing all static and runtime metrics seen above.
+Add the `GraphQL::Metrics` plugins to your schema. This opts you in to capturing all static and runtime metrics seen above.
 
 ```ruby
 class Schema < GraphQL::Schema
@@ -249,7 +246,7 @@ class Schema < GraphQL::Schema
   query_analyzer SimpleAnalyzer
 
   instrument :query, GraphQL::Metrics::Instrumentation.new # Both of these are required if either is used.
-  tracer GraphQL::Metrics::Tracer.new                      # <-- Note!
+  trace_with GraphQL::Metrics::Trace                       # <-- Note!
 
   use GraphQL::Batch # Optional, but highly recommended. See https://github.com/Shopify/graphql-batch/.
 end
@@ -258,7 +255,7 @@ end
 ### Optionally, only gather static metrics
 
 If you don't care to capture runtime metrics like query and resolver timings, you can use your analyzer a standalone
-analyzer without `GraphQL::Metrics::Instrumentation` and `tracer GraphQL::Metrics::Tracer`, like so:
+analyzer without `GraphQL::Metrics::Instrumentation` and `trace_with GraphQL::Metrics::Trace`, like so:
 
 ```ruby
 class Schema < GraphQL::Schema
@@ -275,7 +272,7 @@ Your analyzer will still be called with `query_extracted`, `field_extracted`, bu
 ## Order of execution
 
 Because of the structure of graphql-ruby's plugin architecture, it may be difficult to build an intuition around the
-order in which methods defined on `GraphQL::Metrics::Instrumentation`, `GraphQL::Metrics::Tracer` and subclasses of
+order in which methods defined on `GraphQL::Metrics::Instrumentation`, `GraphQL::Metrics::Trace` and subclasses of
 `GraphQL::Metrics::Analyzer` run.
 
 Although you ideally will not need to care about these details if you are simply using this gem to gather metrics in
@@ -283,16 +280,16 @@ your application as intended, here's a breakdown of the order of execution of th
 
  When used as instrumentation, an analyzer and tracing, the order of execution is usually:
 
-* Tracer.capture_multiplex_start_time
-* Tracer.capture_lexing_time
-* Tracer.capture_parsing_time
+* Trace.capture_multiplex_start_time
+* Trace.capture_lexing_time
+* Trace.capture_parsing_time
 * Instrumentation.before_query (context setup)
-* Tracer.capture_validation_time
-* Tracer.capture_analysis_time
+* Trace.capture_validation_time
+* Trace.capture_analysis_time
 * Analyzer#initialize (bit more context setup, instance vars setup)
 * Analyzer#result
-* Tracer.capture_query_start_time
-* Tracer.trace_field (n times)
+* Trace.capture_query_start_time
+* Trace.trace_field (n times)
 * Instrumentation.after_query (call query and field callbacks, now that we have all static and runtime metrics
   gathered)
 * Analyzer#extract_query
