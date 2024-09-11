@@ -47,5 +47,26 @@ module GraphQL
       duration = current_time_monotonic - start_time
       [result, duration]
     end
+
+    def self.use(
+      schema_defn,
+      analyzer_class:,
+      tracer: GraphQL::Metrics::Trace,
+      capture_timings: nil,
+      capture_field_timings: nil,
+      trace_mode: :default
+    )
+      if capture_field_timings && !capture_timings
+        raise ArgumentError, "Cannot capture field timings without capturing query timings"
+      end
+
+      capture_timings = true if capture_timings.nil?
+      capture_field_timings = true if capture_field_timings.nil?
+      capture_field_timings = false if !capture_timings
+
+      schema_defn.trace_with(GraphQL::Metrics::Instrumentation, capture_field_timings: capture_field_timings)
+      schema_defn.trace_with(tracer, mode: trace_mode) if capture_timings
+      schema_defn.query_analyzer(analyzer_class)
+    end
   end
 end

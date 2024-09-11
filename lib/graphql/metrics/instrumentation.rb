@@ -2,32 +2,39 @@
 
 module GraphQL
   module Metrics
-    class Instrumentation
-      def initialize(capture_field_timings: true)
+    module Instrumentation
+      def initialize(capture_field_timings: true, **_options)
         @capture_field_timings = capture_field_timings
+
+        super
       end
 
-      def before_query(query)
-        unless query_present_and_valid?(query)
-          # Setting this prevents Analyzer and Tracer from trying to gather runtime metrics for invalid queries.
-          query.context[GraphQL::Metrics::SKIP_GRAPHQL_METRICS_ANALYSIS] = true
+      def execute_multiplex(multiplex:)
+        return super if multiplex.context[GraphQL::Metrics::SKIP_GRAPHQL_METRICS_ANALYSIS]
+
+        result = nil
+
+        multiplex.queries.each do |query|
+          ns = query.context.namespace(CONTEXT_NAMESPACE)
+          ns[GraphQL::Metrics::TIMINGS_CAPTURE_ENABLED] = @capture_field_timings
+          ns[GraphQL::Metrics::INLINE_FIELD_TIMINGS] = Hash.new { |h, k| h[k] = [] }
+          ns[GraphQL::Metrics::LAZY_FIELD_TIMINGS] = Hash.new { |h, k| h[k] = [] }
         end
 
-        # Even if queries are present and valid, applications may set this context value in order to opt out of
-        # having Analyzer and Tracer gather runtime metrics.
-        # If we're skipping runtime metrics, then both Instrumentation before_ and after_query can and should be
-        # short-circuited as well.
-        return if query.context[GraphQL::Metrics::SKIP_GRAPHQL_METRICS_ANALYSIS]
+        begin
+          result = super
+        ensure
+          multiplex.queries.each do |query|
+            handle_query(query) if query.valid?
+          end
+        end
 
-        ns = query.context.namespace(CONTEXT_NAMESPACE)
-        ns[GraphQL::Metrics::TIMINGS_CAPTURE_ENABLED] = @capture_field_timings
-        ns[GraphQL::Metrics::INLINE_FIELD_TIMINGS] = {}
-        ns[GraphQL::Metrics::LAZY_FIELD_TIMINGS] = {}
+        result
       end
 
-      def after_query(query)
-        return if query.context[GraphQL::Metrics::SKIP_GRAPHQL_METRICS_ANALYSIS]
+      private
 
+      def handle_query(query)
         ns = query.context.namespace(CONTEXT_NAMESPACE)
         analyzer = ns[GraphQL::Metrics::ANALYZER_INSTANCE_KEY]
 
@@ -49,7 +56,6 @@ module GraphQL
             validation_duration: ns[GraphQL::Metrics::VALIDATION_DURATION],
             lexing_duration: ns[GraphQL::Metrics::LEXING_DURATION],
             analysis_duration: ns[GraphQL::Metrics::ANALYSIS_DURATION],
-            multiplex_start_time: ns[GraphQL::Metrics::MULTIPLEX_START_TIME],
           }
 
           analyzer.extract_fields(with_runtime_metrics: @capture_field_timings)
@@ -58,12 +64,6 @@ module GraphQL
       end
 
       private
-
-      def query_present_and_valid?(query)
-        # Check for selected_operation as well for graphql 1.9 compatibility
-        # which did not reject "empty" documents in its parser.
-        query.valid? && !query.selected_operation.nil?
-      end
 
       def runtime_metrics_interrupted?(context_namespace)
         # NOTE: The start time stored at `ns[GraphQL::Metrics::QUERY_START_TIME_MONOTONIC]` is captured during query
