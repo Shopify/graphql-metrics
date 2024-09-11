@@ -51,20 +51,13 @@ module GraphQL
           path: visitor.response_path,
         }
 
-        if GraphQL::Metrics.timings_capture_enabled?(query.context)
-          @static_field_metrics << static_metrics
-        else
-          field_extracted(static_metrics)
-        end
+        @static_field_metrics << static_metrics
       end
 
       def extract_fields(with_runtime_metrics: true)
-        return if query.context[SKIP_FIELD_AND_ARGUMENT_METRICS]
-
         ns = query.context.namespace(CONTEXT_NAMESPACE)
 
         @static_field_metrics.each do |static_metrics|
-
           if with_runtime_metrics
             resolver_timings = ns[GraphQL::Metrics::INLINE_FIELD_TIMINGS][static_metrics[:path]]
             lazy_resolver_timings = ns[GraphQL::Metrics::LAZY_FIELD_TIMINGS][static_metrics[:path]]
@@ -89,14 +82,6 @@ module GraphQL
       end
 
       def result
-        return if GraphQL::Metrics.timings_capture_enabled?(query.context)
-        return if query.context[GraphQL::Metrics::SKIP_GRAPHQL_METRICS_ANALYSIS]
-
-        # NOTE: If we're running as a static analyzer (i.e. not with instrumentation and tracing), we still need to
-        # flush static query metrics somewhere other than `after_query`.
-        ns = query.context.namespace(CONTEXT_NAMESPACE)
-        analyzer = ns[GraphQL::Metrics::ANALYZER_INSTANCE_KEY]
-        analyzer.extract_query
       end
 
       private

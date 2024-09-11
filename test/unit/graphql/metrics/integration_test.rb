@@ -1057,19 +1057,21 @@ module GraphQL
         assert_equal_with_diff_on_failure(expected_arguments, actual_arguments)
       end
 
-      class SchemaWithoutTimingMetrics < GraphQL::Schema
+      class SchemaWithoutFieldTimingMetrics < GraphQL::Schema
         query QueryRoot
         mutation MutationRoot
 
         use GraphQL::Batch
 
+        instrument :query, GraphQL::Metrics::Instrumentation.new(capture_field_timings: false)
+        trace_with GraphQL::Metrics::Trace
         query_analyzer SimpleAnalyzer
       end
 
-      test 'works as simple analyzer, gathering static metrics with no runtime data when the analyzer is not used as instrumentation and or a tracer' do
+      test 'capture_field_timings disable gathers static metrics with no field timings' do
         context = {}
         query = GraphQL::Query.new(
-          SchemaWithoutTimingMetrics,
+          SchemaWithoutFieldTimingMetrics,
           kitchen_sink_query_document,
           variables: { 'postId': '1', 'titleUpcase': true },
           operation_name: 'PostDetails',
@@ -1077,6 +1079,234 @@ module GraphQL
         )
         result = query.result.to_h
 
+        refute result['errors'].present?
+        assert result['data'].present?
+
+        results = context[:simple_extractor_results]
+
+        actual_queries = results[:queries]
+        actual_fields = results[:fields]
+        actual_arguments = results[:arguments]
+
+        expected_queries = [
+          {
+            :operation_type=>"query",
+            :operation_name=>"PostDetails",
+            :query_start_time=>SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+            :query_duration=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+            :lexing_duration=>SomeNumber.new(at_least: lexing_duration_for_graphql_version),
+            :parsing_duration=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+            :validation_duration=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+            :analysis_duration=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
+            :multiplex_start_time=>SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
+          }
+        ]
+
+        assert_equal_with_diff_on_failure(expected_queries, actual_queries)
+
+        expected_fields = [{
+          :field_name => "id",
+          :return_type_name => "ID",
+          :parent_type_name => "Post",
+          :deprecated => false,
+          :path => ["post", "id"]
+        }, {
+          :field_name => "title",
+          :return_type_name => "String",
+          :parent_type_name => "Post",
+          :deprecated => false,
+          :path => ["post", "title"]
+        }, {
+          :field_name => "body",
+          :return_type_name => "String",
+          :parent_type_name => "Post",
+          :deprecated => false,
+          :path => ["post", "ignoredAlias"]
+        }, {
+          :field_name => "deprecatedBody",
+          :return_type_name => "String",
+          :parent_type_name => "Post",
+          :deprecated => true,
+          :path => ["post", "deprecatedBody"]
+        }, {
+          :field_name => "id",
+          :return_type_name => "ID",
+          :parent_type_name => "Comment",
+          :deprecated => false,
+          :path => ["post", "comments", "id"]
+        }, {
+          :field_name => "body",
+          :return_type_name => "String",
+          :parent_type_name => "Comment",
+          :deprecated => false,
+          :path => ["post", "comments", "body"]
+        }, {
+          :field_name => "id",
+          :return_type_name => "ID",
+          :parent_type_name => "Comment",
+          :deprecated => false,
+          :path => ["post", "comments", "comments", "id"]
+        }, {
+          :field_name => "body",
+          :return_type_name => "String",
+          :parent_type_name => "Comment",
+          :deprecated => false,
+          :path => ["post", "comments", "comments", "body"]
+        }, {
+          :field_name => "comments",
+          :return_type_name => "Comment",
+          :parent_type_name => "Comment",
+          :deprecated => false,
+          :path => ["post", "comments", "comments"]
+        }, {
+          :field_name => "comments",
+          :return_type_name => "Comment",
+          :parent_type_name => "Post",
+          :deprecated => false,
+          :path => ["post", "comments"]
+        }, {
+          :field_name => "id",
+          :return_type_name => "ID",
+          :parent_type_name => "Comment",
+          :deprecated => false,
+          :path => ["post", "otherComments", "id"]
+        }, {
+          :field_name => "body",
+          :return_type_name => "String",
+          :parent_type_name => "Comment",
+          :deprecated => false,
+          :path => ["post", "otherComments", "body"]
+        }, {
+          :field_name => "comments",
+          :return_type_name => "Comment",
+          :parent_type_name => "Post",
+          :deprecated => false,
+          :path => ["post", "otherComments"]
+        }, {
+          :field_name => "post",
+          :return_type_name => "Post",
+          :parent_type_name => "QueryRoot",
+          :deprecated => false,
+          :path => ["post"]
+        }]
+
+        assert_equal_with_diff_on_failure(expected_fields, actual_fields)
+
+        expected_arguments = [{
+          :argument_name => "upcase",
+          :argument_type_name => "Boolean",
+          :parent_name => "title",
+          :grandparent_type_name => "Post",
+          :grandparent_node_name => "post",
+          :parent_input_object_type => nil,
+          :default_used => false,
+          :value_is_null => false,
+          :value => SomeArgumentValue.new,
+        }, {
+          :argument_name => "truncate",
+          :argument_type_name => "Boolean",
+          :parent_name => "body",
+          :grandparent_type_name => "Post",
+          :grandparent_node_name => "post",
+          :parent_input_object_type => nil,
+          :default_used => true,
+          :value_is_null => false,
+          :value => SomeArgumentValue.new,
+        }, {
+          :argument_name => "ids",
+          :argument_type_name => "ID",
+          :parent_name => "comments",
+          :grandparent_type_name => "Comment",
+          :grandparent_node_name => "comments",
+          :parent_input_object_type => nil,
+          :default_used => false,
+          :value_is_null => false,
+          :value => SomeArgumentValue.new,
+        }, {
+          :argument_name => "tags",
+          :argument_type_name => "String",
+          :parent_name => "comments",
+          :grandparent_type_name => "Comment",
+          :grandparent_node_name => "comments",
+          :parent_input_object_type => nil,
+          :default_used => false,
+          :value_is_null => true,
+          :value => SomeArgumentValue.new,
+        }, {
+          :argument_name => "ids",
+          :argument_type_name => "ID",
+          :parent_name => "comments",
+          :grandparent_type_name => "Post",
+          :grandparent_node_name => "post",
+          :parent_input_object_type => nil,
+          :default_used => false,
+          :value_is_null => false,
+          :value => SomeArgumentValue.new,
+        }, {
+          :argument_name => "tags",
+          :argument_type_name => "String",
+          :parent_name => "comments",
+          :grandparent_type_name => "Post",
+          :grandparent_node_name => "post",
+          :parent_input_object_type => nil,
+          :default_used => false,
+          :value_is_null => true,
+          :value => SomeArgumentValue.new,
+        }, {
+          :argument_name => "ids",
+          :argument_type_name => "ID",
+          :parent_name => "comments",
+          :grandparent_type_name => "Post",
+          :grandparent_node_name => "post",
+          :parent_input_object_type => nil,
+          :default_used => false,
+          :value_is_null => false,
+          :value => SomeArgumentValue.new,
+        }, {
+          :argument_name => "id",
+          :argument_type_name => "ID",
+          :parent_name => "post",
+          :grandparent_type_name => "QueryRoot",
+          :grandparent_node_name => "query",
+          :parent_input_object_type => nil,
+          :default_used => false,
+          :value_is_null => false,
+          :value => SomeArgumentValue.new,
+        }, {
+          :argument_name => "locale",
+          :argument_type_name => "String",
+          :parent_name => "post",
+          :grandparent_type_name => "QueryRoot",
+          :grandparent_node_name => "query",
+          :parent_input_object_type => nil,
+          :default_used => true,
+          :value_is_null => false,
+          :value => SomeArgumentValue.new,
+        }]
+
+        assert_equal_with_diff_on_failure(expected_arguments, actual_arguments)
+      end
+
+      class SchemaWithoutTraceMetrics < GraphQL::Schema
+        query QueryRoot
+        mutation MutationRoot
+
+        use GraphQL::Batch
+
+        instrument :query, GraphQL::Metrics::Instrumentation.new(capture_field_timings: false)
+        query_analyzer SimpleAnalyzer
+      end
+
+      test 'instrumentation and analyzer without trace metrics gathers static metrics only' do
+        context = {}
+        query = GraphQL::Query.new(
+          SchemaWithoutTraceMetrics,
+          kitchen_sink_query_document,
+          variables: { 'postId': '1', 'titleUpcase': true },
+          operation_name: 'PostDetails',
+          context: context
+        )
+        result = query.result.to_h
         refute result['errors'].present?
         assert result['data'].present?
 

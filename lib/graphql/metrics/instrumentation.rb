@@ -3,6 +3,10 @@
 module GraphQL
   module Metrics
     class Instrumentation
+      def initialize(capture_field_timings: true)
+        @capture_field_timings = capture_field_timings
+      end
+
       def before_query(query)
         unless query_present_and_valid?(query)
           # Setting this prevents Analyzer and Tracer from trying to gather runtime metrics for invalid queries.
@@ -16,7 +20,7 @@ module GraphQL
         return if query.context[GraphQL::Metrics::SKIP_GRAPHQL_METRICS_ANALYSIS]
 
         ns = query.context.namespace(CONTEXT_NAMESPACE)
-        ns[GraphQL::Metrics::TIMINGS_CAPTURE_ENABLED] = true
+        ns[GraphQL::Metrics::TIMINGS_CAPTURE_ENABLED] = @capture_field_timings
         ns[GraphQL::Metrics::INLINE_FIELD_TIMINGS] = {}
         ns[GraphQL::Metrics::LAZY_FIELD_TIMINGS] = {}
       end
@@ -48,7 +52,7 @@ module GraphQL
             multiplex_start_time: ns[GraphQL::Metrics::MULTIPLEX_START_TIME],
           }
 
-          analyzer.extract_fields
+          analyzer.extract_fields(with_runtime_metrics: @capture_field_timings)
           analyzer.extract_query(runtime_query_metrics: runtime_query_metrics)
         end
       end
