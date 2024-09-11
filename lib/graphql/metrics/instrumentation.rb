@@ -25,7 +25,7 @@ module GraphQL
           result = super
         ensure
           multiplex.queries.each do |query|
-            handle_query(query)
+            handle_query(query) if query.valid?
           end
         end
 

@@ -1556,6 +1556,22 @@ module GraphQL
         assert_equal_with_diff_on_failure(expected_arguments, actual_arguments)
       end
 
+      test "handles invalid documents without collecting metrics" do
+        document = <<~QUERY
+          # Welcome to GraphiQL !
+        QUERY
+
+        context = {}
+        query = GraphQL::Query.new(SchemaWithFullMetrics, document, context: context)
+        result = query.result.to_h
+
+        assert_equal({
+          "errors" => [],
+        }, result)
+
+        refute context[:simple_extractor_results].present?
+      end
+
       private
 
       def assert_equal_with_diff_on_failure(expected, actual)
