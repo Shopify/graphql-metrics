@@ -50,7 +50,7 @@ What you do with these captured metrics is up to you!
 **NOTE**: If any non-`graphql-ruby` gem-related exceptions occur in your application during query document
 parsing and validation, **runtime metrics** for queries (like `query_duration`, etc.) as well as field
 resolver timings (like `resolver_timings`, `lazy_resolver_timings`) **may not be present** in the extracted `metrics` hash,
-even if you opt to collect them by using `GraphQL::Metrics::Analyzer` and `GraphQL::Metrics::Trace`.
+even if you opt to collect them.
 
 ### Define your own analyzer subclass
 
@@ -79,7 +79,6 @@ even if you opt to collect them by using `GraphQL::Metrics::Analyzer` and `Graph
     #   parsing_duration: 0.0008190000080503523,
     #   validation_duration: 0.01704599999357015,
     #   analysis_duration: 0.0008190000080503523,
-    #   multiplex_start_time: 0.0008190000080503523,
     # }
     #
     # You can use these metrics to track high-level query performance, along with any other details you wish to
@@ -172,8 +171,9 @@ even if you opt to collect them by using `GraphQL::Metrics::Analyzer` and `Graph
   end
 ```
 
-Once defined, you can opt into capturing all metrics seen above by simply including GraphQL::Metrics as a plugin on your
+Once defined, you can opt into capturing all metrics seen above by simply including `GraphQL::Metrics` as a plugin on your
 schema.
+
 #### Metrics that are captured for arguments for fields and directives
 
 Let's have a query example
@@ -243,11 +243,7 @@ class Schema < GraphQL::Schema
   query QueryRoot
   mutation MutationRoot
 
-  instrument :query, GraphQL::Metrics::Instrumentation.new # Both of these are required if either is used.
-  trace_with GraphQL::Metrics::Trace                       # <-- Note!
-  query_analyzer SimpleAnalyzer
-
-  use GraphQL::Batch # Optional, but highly recommended. See https://github.com/Shopify/graphql-batch/.
+  use GraphQL::Metrics
 end
 ```
 
@@ -260,24 +256,21 @@ class Schema < GraphQL::Schema
   query QueryRoot
   mutation MutationRoot
 
-  instrument :query, GraphQL::Metrics::Instrumentation.new(capture_field_timings: false)
-  query_analyzer SimpleAnalyzer
-  trace_with GraphQL::Metrics::Trace
+  use GraphQL::Metrics, capture_field_timings: false
 end
 ```
 
 Your analyzer will still be called with `query_extracted`, `field_extracted`, but with timings metrics omitted.
 `argument_extracted` will work exactly the same.
 
-And if you want to disable tracing metrics entirely, the tracer can be omitted as well:
+And if you want to disable tracing metrics entirely, use the `capture_timings` option:
 
 ```ruby
 class Schema < GraphQL::Schema
   query QueryRoot
   mutation MutationRoot
 
-  instrument :query, GraphQL::Metrics::Instrumentation.new(capture_field_timings: false)
-  query_analyzer SimpleAnalyzer
+  use GraphQL::Metrics, capture_timings: false
 end
 ```
 
@@ -292,29 +285,20 @@ your application as intended, here's a breakdown of the order of execution of th
 
  When used as instrumentation, an analyzer and tracing, the order of execution is usually:
 
-* Trace.capture_multiplex_start_time
+* Instrumentation.execute_multiplex (context setup)
 * Trace.capture_lexing_time
 * Trace.capture_parsing_time
-* Instrumentation.before_query (context setup)
 * Trace.capture_validation_time
 * Trace.capture_analysis_time
 * Analyzer#initialize (bit more context setup, instance vars setup)
 * Analyzer#result
 * Trace.capture_query_start_time
 * Trace.trace_field (n times)
-* Instrumentation.after_query (call query and field callbacks, now that we have all static and runtime metrics
-  gathered)
+* Instrumentation.execute_multiplex (call query and field callbacks, now that we have all static and runtime metrics gathered)
 * Analyzer#extract_query
 * Analyzer#query_extracted
 * Analyzer#extract_fields_with_runtime_metrics
   * calls Analyzer#field_extracted n times
-
-When used as a simple analyzer, which doesn't gather or emit any runtime metrics (timings, arg values):
-* Analyzer#initialize
-* Analyzer#field_extracted n times
-* Analyzer#result
-* Analyzer#extract_query
-* Analyzer#query_extracted
 
 ## Development
 
