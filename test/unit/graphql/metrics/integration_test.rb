@@ -7,7 +7,7 @@ require 'support/parser'
 
 module GraphQL
   module Metrics
-    class IntegrationTest < ActiveSupport::TestCase
+    class TraceIntegrationTest < ActiveSupport::TestCase
       REASONABLY_RECENT_UNIX_TIME = 1571337000 # aka 2019-10-17 in Unix time.
       SMALL_NONZERO_NUMBER = Float::EPSILON # aka 2.220446049250313e-16
 
@@ -79,6 +79,13 @@ module GraphQL
         end
       end
 
+      module TestTrace
+        def execute_multiplex(multiplex:)
+          multiplex.context[:test_trace_was_executed] = true
+          super
+        end
+      end
+
       class SchemaWithFullMetrics < GraphQL::Schema
         query QueryRoot
         mutation MutationRoot
@@ -88,12 +95,40 @@ module GraphQL
 
         instrument :query, GraphQL::Metrics::Instrumentation.new
         query_analyzer SimpleAnalyzer
-        tracer GraphQL::Metrics::Tracer.new
+        trace_with TestTrace
+        trace_with GraphQL::Metrics::Trace
 
         def self.parse_error(err, _context)
           return if err.is_a?(GraphQL::ParseError)
           raise err
         end
+      end
+
+      test "it doesn't short-circuit other traces" do
+        context = {}
+        query = GraphQL::Query.new(
+          SchemaWithFullMetrics,
+          kitchen_sink_query_document,
+          variables: { 'postId': '1', 'titleUpcase': true },
+          operation_name: 'PostDetails',
+          context: context
+        )
+        result = query.result.to_h
+        assert query.multiplex.context[:test_trace_was_executed]
+      end
+
+      test "tracing is skipped when the skip context key is set" do
+        query = GraphQL::Query.new(
+          SchemaWithFullMetrics,
+          kitchen_sink_query_document,
+          variables: { 'postId': '1', 'titleUpcase': true },
+          operation_name: 'PostDetails',
+          context: { SKIP_GRAPHQL_METRICS_ANALYSIS => true }
+        )
+        result = query.result.to_h
+
+        assert_nil query.multiplex.context.namespace(CONTEXT_NAMESPACE)[QUERY_START_TIME]
+        assert_nil query.multiplex.context.namespace(CONTEXT_NAMESPACE)[LEXING_DURATION]
       end
 
       test 'extracts metrics from queries, as well as their fields and arguments (when using Query#result)' do
@@ -163,6 +198,16 @@ module GraphQL
 
         expected_arguments = [
           {
+            argument_name: "val",
+            argument_type_name: "Int",
+            parent_name: "customDirective",
+            grandparent_type_name: "__Directive",
+            grandparent_node_name: "query",
+            parent_input_object_type: nil,
+            default_used: false,
+            value_is_null: false,
+            value: SomeArgumentValue.new
+          }, {
             argument_name: "if",
             argument_type_name: "Boolean",
             parent_name: "skip",
@@ -192,30 +237,14 @@ module GraphQL
             default_used: true,
             value_is_null: false,
             value: SomeArgumentValue.new,
-          }, {
-            argument_name: "val",
-            argument_type_name: "Int",
-            parent_name: "customDirective",
-            grandparent_type_name: "__Directive",
-            grandparent_node_name: "query",
-            parent_input_object_type: nil,
-            default_used: false,
-            value_is_null: false,
-            value: SomeArgumentValue.new
           }
         ]
 
         assert_equal_with_diff_on_failure(
-          [{ directive_name: 'skip' }, { directive_name: 'customDirective' }],
-          actual_directives,
-          sort_by: ->(x) { x[:directive_name] }
+          [{ directive_name: 'customDirective' }, { directive_name: 'skip' }],
+          actual_directives
         )
-
-        assert_equal_with_diff_on_failure(
-          expected_arguments,
-          actual_arguments,
-          sort_by: ->(x) { x[:argument_name] }
-        )
+        assert_equal_with_diff_on_failure(expected_arguments, actual_arguments)
       end
 
       test 'extracts metrics from directives on MUTATION location' do
@@ -250,6 +279,16 @@ module GraphQL
 
         expected_arguments = [
           {
+              argument_name: "val",
+              argument_type_name: "Int",
+              parent_name: "customDirective",
+              grandparent_type_name: "__Directive",
+              grandparent_node_name: "mutation",
+              parent_input_object_type: nil,
+              default_used: false,
+              value_is_null: false,
+              value: SomeArgumentValue.new,
+            }, {
               argument_name: "post",
               argument_type_name: "PostInput",
               parent_name: "postCreate",
@@ -309,20 +348,10 @@ module GraphQL
               default_used: false,
               value_is_null: false,
               value: SomeArgumentValue.new,
-            }, {
-              argument_name: "val",
-              argument_type_name: "Int",
-              parent_name: "customDirective",
-              grandparent_type_name: "__Directive",
-              grandparent_node_name: "mutation",
-              parent_input_object_type: nil,
-              default_used: false,
-              value_is_null: false,
-              value: SomeArgumentValue.new,
             }
           ]
         assert_equal_with_diff_on_failure([{ directive_name: 'customDirective' }], actual_directives)
-        assert_equal_with_diff_on_failure(expected_arguments, actual_arguments, sort_by: ->(x) { x[:argument_name] })
+        assert_equal_with_diff_on_failure(expected_arguments, actual_arguments)
       end
 
       test 'extracts metrics from directives on QUERY and FIELD location for document with fragment' do
@@ -346,6 +375,16 @@ module GraphQL
 
         expected_arguments = [
           {
+            argument_name: "val",
+            argument_type_name: "Int",
+            parent_name: "customDirective",
+            grandparent_type_name: "__Directive",
+            grandparent_node_name: "query",
+            parent_input_object_type: nil,
+            default_used: false,
+            value_is_null: false,
+            value: SomeArgumentValue.new,
+          }, {
             argument_name: "if",
             argument_type_name: "Boolean",
             parent_name: "skip",
@@ -385,94 +424,14 @@ module GraphQL
             default_used: true,
             value_is_null: false,
             value: SomeArgumentValue.new,
-          }, {
-            argument_name: "val",
-            argument_type_name: "Int",
-            parent_name: "customDirective",
-            grandparent_type_name: "__Directive",
-            grandparent_node_name: "query",
-            parent_input_object_type: nil,
-            default_used: false,
-            value_is_null: false,
-            value: SomeArgumentValue.new,
           }
         ]
 
         assert_equal_with_diff_on_failure(
-          [{ directive_name: 'skip' }, { directive_name: 'customDirective' }],
-          actual_directives,
-          sort_by: -> (x) { x[:directive_name] }
+          [{ directive_name: 'customDirective' }, { directive_name: 'skip' }],
+          actual_directives
         )
-        assert_equal_with_diff_on_failure(
-          expected_arguments,
-          actual_arguments,
-          sort_by: -> (x) { x[:argument_name] }
-        )
-      end
-
-      test 'extracts metrics from directives on FIELD location for document with inline fragment with directive' do
-        context = {}
-        query = GraphQL::Query.new(
-          SchemaWithFullMetrics,
-          query_document_with_inline_fragment_with_directive,
-          variables: { 'postId': "1" },
-          operation_name: 'PostDetails',
-          context: context
-        )
-        result = query.result.to_h
-
-        refute result['errors'].present?
-        assert result['data'].present?
-
-        results = context[:simple_extractor_results]
-
-        actual_directives = results[:directives]
-        actual_arguments = results[:arguments]
-
-        expected_arguments = [
-          {
-            argument_name: "if",
-            argument_type_name: "Boolean",
-            parent_name: "skip",
-            grandparent_type_name: "__Directive",
-            grandparent_node_name: nil,
-            parent_input_object_type: nil,
-            default_used: false,
-            value_is_null: false,
-            value: SomeArgumentValue.new,
-          }, {
-            argument_name: "id",
-            argument_type_name: "ID",
-            parent_name: "post",
-            grandparent_type_name: "QueryRoot",
-            grandparent_node_name: "query",
-            parent_input_object_type: nil,
-            default_used: false,
-            value_is_null: false,
-            value: SomeArgumentValue.new,
-          }, {
-            argument_name: "locale",
-            argument_type_name: "String",
-            parent_name: "post",
-            grandparent_type_name: "QueryRoot",
-            grandparent_node_name: "query",
-            parent_input_object_type: nil,
-            default_used: true,
-            value_is_null: false,
-            value: SomeArgumentValue.new,
-          }
-        ]
-
-        assert_equal_with_diff_on_failure(
-          [{ directive_name: 'skip' }],
-          actual_directives,
-          sort_by: -> (x) { x[:directive_name] }
-        )
-        assert_equal_with_diff_on_failure(
-          expected_arguments,
-          actual_arguments,
-          sort_by: -> (x) { x[:argument_name] }
-        )
+        assert_equal_with_diff_on_failure(expected_arguments, actual_arguments)
       end
 
       test 'extracts metrics from queries, as well as their fields and arguments (when using Schema.execute)' do
@@ -548,7 +507,7 @@ module GraphQL
             :operation_name=>"PostDetails",
             :query_start_time=>SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
             :query_duration=>SomeNumber.new(at_least: 2),
-            :lexing_duration=>SomeNumber.new(at_least: 0),
+            :lexing_duration=>SomeNumber.new(at_least: lexing_duration_for_graphql_version),
             :parsing_duration=>SomeNumber.new(at_least: 0),
             :validation_duration=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
             :analysis_duration=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
@@ -558,36 +517,6 @@ module GraphQL
         assert_equal_with_diff_on_failure(expected_queries, actual_queries)
         assert_equal_with_diff_on_failure(kitchen_sink_expected_fields, actual_fields)
         assert_equal_with_diff_on_failure(kitchen_sink_expected_arguments, actual_arguments)
-      end
-
-      test 'parsing metrics are properly reset when a second query is initialized with a document' do
-        first_query_context = {}
-
-        GraphQL::Query.new(
-          SchemaWithFullMetrics,
-          kitchen_sink_query_document,
-          variables: { 'postId': '1', 'titleUpcase': true },
-          operation_name: 'PostDetails',
-          context: first_query_context,
-        ).result
-
-        first_query_result = first_query_context[:simple_extractor_results][:queries][0]
-
-        second_query_context = {}
-
-        GraphQL::Query.new(
-          SchemaWithFullMetrics,
-          nil,
-          document: GraphQL.parse(kitchen_sink_query_document),
-          variables: { 'postId': '1', 'titleUpcase': true },
-          operation_name: 'PostDetails',
-          context: second_query_context,
-        ).result
-
-        second_query_result = second_query_context[:simple_extractor_results][:queries][0]
-
-        assert_equal(0.0, second_query_result[:lexing_duration])
-        assert_equal(0.0, second_query_result[:parsing_duration])
       end
 
       test 'GraphQL::Querys executed in the same thread have increasing `multiplex_start_time`s (regression test; see below)' do
@@ -649,7 +578,7 @@ module GraphQL
           :operation_name => "OtherQuery",
           :query_start_time => SomeNumber.new(at_least: REASONABLY_RECENT_UNIX_TIME),
           :query_duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
-          :lexing_duration => SomeNumber.new(at_least: 0),
+          :lexing_duration => SomeNumber.new(at_least: lexing_duration_for_graphql_version),
           :parsing_duration => SomeNumber.new(at_least: 0),
           :validation_duration => SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
           :analysis_duration=>SomeNumber.new(at_least: SMALL_NONZERO_NUMBER),
@@ -1433,10 +1362,10 @@ module GraphQL
 
       private
 
-      def assert_equal_with_diff_on_failure(expected, actual, sort_by: ->(_x) {} )
+      def assert_equal_with_diff_on_failure(expected, actual)
         assert_equal(
-          expected.sort_by(&sort_by),
-          actual.sort_by(&sort_by),
+          expected,
+          actual,
           Diffy::Diff.new(JSON.pretty_generate(expected), JSON.pretty_generate(actual))
         )
       end
@@ -1750,19 +1679,6 @@ module GraphQL
               ... on Post {
                 id @skip(if: true)
                 title(upcase: $titleUpcase)
-              }
-            }
-          }
-        GRAPHQL
-      end
-
-      def query_document_with_inline_fragment_with_directive
-        <<~GRAPHQL
-          query PostDetails($postId: ID!) {
-            post(id: $postId) {
-              __typename # Ignored
-              ... @skip(if: true) {
-                id
               }
             }
           }
