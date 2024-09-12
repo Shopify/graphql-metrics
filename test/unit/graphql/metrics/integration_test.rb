@@ -92,7 +92,7 @@ module GraphQL
         directive CustomDirective
 
         use GraphQL::Batch
-        use GraphQL::Metrics, analyzer_class: SimpleAnalyzer
+        use GraphQL::Metrics, analyzer: SimpleAnalyzer
 
         trace_with TestTrace
 
@@ -107,7 +107,7 @@ module GraphQL
         mutation MutationRoot
 
         use GraphQL::Batch
-        use GraphQL::Metrics, analyzer_class: SimpleAnalyzer, capture_field_timings: false
+        use GraphQL::Metrics, analyzer: SimpleAnalyzer, capture_field_timings: false
       end
 
       class SchemaWithoutTimingMetrics < GraphQL::Schema
@@ -115,7 +115,7 @@ module GraphQL
         mutation MutationRoot
 
         use GraphQL::Batch
-        use GraphQL::Metrics, analyzer_class: SimpleAnalyzer, capture_timings: false
+        use GraphQL::Metrics, analyzer: SimpleAnalyzer, capture_timings: false
       end
 
       test "it doesn't short-circuit other traces" do

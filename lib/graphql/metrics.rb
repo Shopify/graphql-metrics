@@ -50,7 +50,7 @@ module GraphQL
 
     def self.use(
       schema_defn,
-      analyzer_class:,
+      analyzer:,
       tracer: GraphQL::Metrics::Trace,
       capture_timings: nil,
       capture_field_timings: nil,
@@ -66,7 +66,7 @@ module GraphQL
 
       schema_defn.trace_with(GraphQL::Metrics::Instrumentation, capture_field_timings: capture_field_timings)
       schema_defn.trace_with(tracer, mode: trace_mode) if capture_timings
-      schema_defn.query_analyzer(analyzer_class)
+      schema_defn.query_analyzer(analyzer)
     end
   end
 end
