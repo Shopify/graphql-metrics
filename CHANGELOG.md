@@ -1,3 +1,42 @@
+6.0.0
+-----
+
+**Usage change**
+Due to Instrumentation plugins being deprecated in the `graphql` gem, `graphql-metrics` has been refactored to use the [new `Tracing` API](https://graphql-ruby.org/queries/tracing.html).
+This changes how `graphql-metrics` is used in your application.
+
+Before:
+```ruby
+class MySchema < GraphQL::Schema
+  instrument :query, GraphQLMetrics::Instrumentation.new
+  query_analyzer MyMetricsAnalyzer
+  tracer GraphQL::Metrics::Tracer.new
+end
+```
+
+After:
+```ruby
+class MySchema < GraphQL::Schema
+  use GraphQL::Metrics, analyzer: MyMetricsAnalyzer
+end
+```
+
+Other breaking changes:
+* `graphql` >= 2.3 is now required.
+* Apollo tracing spec support has been removed (the spec has been deprecated for years). All `start_time_offset` metrics have been removed.
+* Support for the old tracing API has been removed.
+* The `multiplex_start_time_monotonic` operation mettric has been removed.
+
+
+Changes:
+- [87](https://github.com/Shopify/graphql-metrics/pull/87) Migrate Instrumentation to tracing
+- [88](https://github.com/Shopify/graphql-metrics/pull/88) Update `analyzer` option
+- [86](https://github.com/Shopify/graphql-metrics/pull/86) Refactor static metric mode
+- [85](https://github.com/Shopify/graphql-metrics/pull/85) Remove old tracing API support
+- [84](https://github.com/Shopify/graphql-metrics/pull/84) Remove Apollo tracing spec support
+- [80](https://github.com/Shopify/graphql-metrics/pull/80) Support new parser
+- [79](https://github.com/Shopify/graphql-metrics/pull/79) Centralize Ruby Version to `.ruby-version`
+
 5.0.8
 -----
 - [76](https://github.com/Shopify/graphql-metrics/pull/76) Reduce object allocations
