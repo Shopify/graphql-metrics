@@ -7,9 +7,6 @@ Compatible with the [`graphql-batch` gem](https://github.com/Shopify/graphql-bat
 
 Be sure to read the [CHANGELOG](CHANGELOG.md) to stay updated on feature additions, breaking changes made to this gem.
 
-**NOTE**: Not tested with graphql-ruby's multiplexing feature. Metrics may not
-be accurate if you execute multiple operations at once.
-
 ## Installation
 
 Add this line to your application's Gemfile:
@@ -42,7 +39,7 @@ Get started by defining your own Analyzer, inheriting from `GraphQL::Metrics::An
 
 The following analyzer demonstrates a simple way to capture commonly used metrics sourced from key parts of your schema
 definition, the query document being served, as well as runtime query and resolver timings. In this toy example, all of
-this data is simply stored on the GraphQL::Query context, under a namespace to avoid collisions with other analyzers
+this data is simply stored on the `GraphQL::Query` context, under a namespace to avoid collisions with other analyzers
 etc.
 
 What you do with these captured metrics is up to you!
@@ -176,8 +173,7 @@ schema.
 
 #### Metrics that are captured for arguments for fields and directives
 
-Let's have a query example
-
+Example query:
 ```graphql
 query PostDetails($postId: ID!, $commentsTags: [String!] = null, $val: Int!) @customDirective(val: $val) {
   post(id: $postId) {
@@ -236,14 +232,14 @@ These are some of the arguments that are extracted
 
 ### Make use of your analyzer
 
-Add the `GraphQL::Metrics` plugins to your schema. This opts you in to capturing all static and runtime metrics seen above.
+Add the `GraphQL::Metrics` plugin to your schema. This opts you in to capturing all static and runtime metrics seen above.
 
 ```ruby
 class Schema < GraphQL::Schema
   query QueryRoot
   mutation MutationRoot
 
-  use GraphQL::Metrics
+  use GraphQL::Metrics, analyzer: SimpleAnalyzer
 end
 ```
 
@@ -256,7 +252,7 @@ class Schema < GraphQL::Schema
   query QueryRoot
   mutation MutationRoot
 
-  use GraphQL::Metrics, capture_field_timings: false
+  use GraphQL::Metrics, analyzer: SimpleAnalyzer, capture_field_timings: false
 end
 ```
 
@@ -270,7 +266,7 @@ class Schema < GraphQL::Schema
   query QueryRoot
   mutation MutationRoot
 
-  use GraphQL::Metrics, capture_timings: false
+  use GraphQL::Metrics, analyzer: SimpleAnalyzer, capture_timings: false
 end
 ```
 
