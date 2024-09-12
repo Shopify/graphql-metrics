@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "concurrent"
 require "graphql/metrics/version"
 require "graphql/metrics/instrumentation"
 require "graphql/metrics/trace"
