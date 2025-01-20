@@ -14,7 +14,7 @@ Gem::Specification.new do |spec|
   spec.homepage      = 'https://github.com/Shopify/graphql-metrics'
   spec.license       = "MIT"
 
-  spec.required_ruby_version = ">= 2.7"
+  spec.required_ruby_version = ">= 3.1"
 
   spec.metadata["allowed_push_host"] = "https://rubygems.org"
 
@@ -29,7 +29,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rake", "~> 13.2"
   spec.add_development_dependency "minitest", "~> 5.0"
   spec.add_development_dependency 'graphql-batch'
-  spec.add_development_dependency "activesupport", "~> 6.1.7"
+  spec.add_development_dependency "activesupport", "~> 7.2.1"
   spec.add_development_dependency "pry"
   spec.add_development_dependency "pry-byebug"
   spec.add_development_dependency "mocha"
