@@ -30,28 +30,28 @@ module GraphQL
       end
 
       def validate(query:, validate:)
-        return super if @skip_tracing
+        return super if skip_tracing_for_query?(query:)
         capture_validation_time(query.context) { super }
       end
 
       def analyze_query(query:)
-        return super if @skip_tracing
+        return super if skip_tracing_for_query?(query:)
         capture_analysis_time(query.context) { super }
       end
 
       def execute_query(query:)
-        return super if @skip_tracing
+        return super if skip_tracing_for_query?(query:)
         capture_query_start_time(query.context) { super }
       end
 
       def execute_field(field:, query:, ast_node:, arguments:, object:)
-        return super if @skip_tracing || query.context[SKIP_FIELD_AND_ARGUMENT_METRICS]
+        return super if skip_tracing_for_query?(query:) || query.context[SKIP_FIELD_AND_ARGUMENT_METRICS]
         return super unless capture_field_timings?(query.context)
         trace_field(GraphQL::Metrics::INLINE_FIELD_TIMINGS, query) { super }
       end
 
       def execute_field_lazy(field:, query:, ast_node:, arguments:, object:)
-        return super if @skip_tracing || query.context[SKIP_FIELD_AND_ARGUMENT_METRICS]
+        return super if skip_tracing_for_query?(query:) || query.context[SKIP_FIELD_AND_ARGUMENT_METRICS]
         return super unless capture_field_timings?(query.context)
         trace_field(GraphQL::Metrics::LAZY_FIELD_TIMINGS, query) { super }
       end
@@ -119,6 +119,10 @@ module GraphQL
         ns[context_key][path_excluding_numeric_indicies] << duration
 
         result
+      end
+
+      def skip_tracing_for_query?(query:)
+        @skip_tracing || query.context&.fetch(SKIP_GRAPHQL_METRICS_ANALYSIS, false)
       end
     end
   end
