@@ -130,10 +130,19 @@ module GraphQL
             parent_input_object: parent_input_object,
             parent: parent
           )
+
+          # For nested InputObject arguments, we need to pass the InputObject type as the parent
+          # for its child fields to be properly attributed
+          parent_for_nested_fields = if argument.value.is_a?(::GraphQL::Schema::InputObject)
+            argument.value.class
+          else
+            parent_input_object
+          end
+
           extract_arguments(
-            argument:argument.value,
+            argument: argument.value,
             definition: definition,
-            parent_input_object: parent_input_object,
+            parent_input_object: parent_for_nested_fields,
             parent: parent
           )
         when ::GraphQL::Schema::InputObject

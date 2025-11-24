@@ -1556,6 +1556,45 @@ module GraphQL
         assert_equal_with_diff_on_failure(expected_arguments, actual_arguments)
       end
 
+      test "extracts parent_input_object_type for nested input object fields" do
+        context = {}
+        query = GraphQL::Query.new(
+          SchemaWithFullMetrics,
+          mutation_document,
+          variables: {
+            'postInput': {
+              "title": "Test",
+              "body": "Content",
+              "embeddedTags": [
+                {
+                  "handle": "test-tag",
+                  "displayName": "Test Tag",
+                },
+              ],
+            }
+          },
+          operation_name: 'PostCreate',
+          context: context
+        )
+        result = query.result.to_h
+
+        refute result['errors'].present?
+        assert result['data'].present?
+
+        results = context[:simple_extractor_results]
+        actual_arguments = results[:arguments]
+
+        post_argument = actual_arguments.find { |arg| arg[:argument_name] == "post" }
+        title_argument = actual_arguments.find { |arg| arg[:argument_name] == "title" }
+        embedded_tags_argument = actual_arguments.find { |arg| arg[:argument_name] == "embeddedTags" }
+        handle_argument = actual_arguments.find { |arg| arg[:argument_name] == "handle" }
+
+        assert_equal(nil, post_argument[:parent_input_object_type])
+        assert_equal("PostInput", title_argument[:parent_input_object_type])
+        assert_equal("PostInput", embedded_tags_argument[:parent_input_object_type])
+        assert_equal("TagInput", handle_argument[:parent_input_object_type])
+      end
+
       test "handles invalid documents without collecting metrics" do
         document = <<~QUERY
           # Welcome to GraphiQL !
