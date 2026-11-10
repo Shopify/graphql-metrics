@@ -1589,7 +1589,7 @@ module GraphQL
         embedded_tags_argument = actual_arguments.find { |arg| arg[:argument_name] == "embeddedTags" }
         handle_argument = actual_arguments.find { |arg| arg[:argument_name] == "handle" }
 
-        assert_equal(nil, post_argument[:parent_input_object_type])
+        assert_nil(post_argument[:parent_input_object_type])
         assert_equal("PostInput", title_argument[:parent_input_object_type])
         assert_equal("PostInput", embedded_tags_argument[:parent_input_object_type])
         assert_equal("TagInput", handle_argument[:parent_input_object_type])
