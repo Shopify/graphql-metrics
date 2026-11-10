@@ -2,14 +2,14 @@ Releasing graphql-metrics
 
 1. Check the Semantic Versioning page for info on how to version the new release: http://semver.org
 2. Update VERSION in lib/graphql/metrics/version.rb
-3. Add a CHANGELOG entry for the new release
-4. Commit the changes with a commit message like "Packaging for release X.Y.Z"
-5. Tag the release with the version (Leave REV blank for HEAD or provide a SHA)
-  $ git tag vX.Y.Z REV
-6. Push out the changes
-  $ git push
-7. Push out the tags
-  $ git push --tags
-8. Publish the gem
-  $ gem build graphql_metrics.gemspec
-  $ gem push graphql-metrics-X.Y.Z.gem
+3. Run `bundle install` so Gemfile.lock picks up the new version
+4. Add a CHANGELOG entry for the new release
+5. Open a pull request with a title like "Packaging for release X.Y.Z" and merge it
+6. Tag the merge commit on main with the version and push the tag
+  $ git checkout main && git pull
+  $ git tag vX.Y.Z
+  $ git push origin vX.Y.Z
+
+Pushing the tag runs the Release workflow (.github/workflows/release.yml),
+which publishes the gem to RubyGems.org with trusted publishing and creates
+a GitHub release with generated notes. No RubyGems API key is needed.
