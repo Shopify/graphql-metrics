@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require "graphql/metrics/version"
-require "graphql/metrics/instrumentation"
-require "graphql/metrics/trace"
-require "graphql/metrics/analyzer"
+require_relative "metrics/version"
+require_relative "metrics/instrumentation"
+require_relative "metrics/trace"
+require_relative "metrics/analyzer"
 
 module GraphQL
   module Metrics
