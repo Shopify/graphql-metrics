@@ -1,3 +1,8 @@
+6.0.1
+-----
+- [149](https://github.com/Shopify/graphql-metrics/pull/149) Require Ruby 3.3 or newer
+- [110](https://github.com/Shopify/graphql-metrics/pull/110) Fix missing `parent_input_object_type` in nested input object metrics
+
 6.0.0
 -----
 
