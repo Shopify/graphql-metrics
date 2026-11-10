@@ -10,7 +10,6 @@ require "minitest/focus"
 require 'mocha/minitest'
 
 require 'pry'
-require 'ostruct'
 require 'diffy'
 require 'hashdiff'
 
