@@ -7,7 +7,7 @@ require 'support/parser'
 
 module GraphQL
   module Metrics
-    class TraceIntegrationTest < ActiveSupport::TestCase
+    class TraceIntegrationTest < Minitest::Test
       REASONABLY_RECENT_UNIX_TIME = 1571337000 # aka 2019-10-17 in Unix time.
       SMALL_NONZERO_NUMBER = Float::EPSILON # aka 2.220446049250313e-16
 
@@ -118,7 +118,7 @@ module GraphQL
         use GraphQL::Metrics, analyzer: SimpleAnalyzer, capture_timings: false
       end
 
-      test "it doesn't short-circuit other traces" do
+      def test_it_does_not_short_circuit_other_traces
         context = {}
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,
@@ -131,7 +131,7 @@ module GraphQL
         assert query.multiplex.context[:test_trace_was_executed]
       end
 
-      test "tracing is skipped when the skip context key is set" do
+      def test_tracing_is_skipped_when_the_skip_context_key_is_set
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,
           kitchen_sink_query_document,
@@ -145,7 +145,7 @@ module GraphQL
         assert_nil query.multiplex.context.namespace(CONTEXT_NAMESPACE)[LEXING_DURATION]
       end
 
-      test 'extracts metrics from queries, as well as their fields and arguments (when using Query#result)' do
+      def test_extracts_metrics_from_queries_as_well_as_their_fields_and_arguments_when_using_Query_result
         context = {}
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,
@@ -157,8 +157,8 @@ module GraphQL
         )
         result = query.result.to_h
 
-        refute result['errors'].present?
-        assert result['data'].present?
+        assert_nil result['errors']
+        refute_empty result['data']
 
         results = context[:simple_extractor_results]
 
@@ -171,7 +171,7 @@ module GraphQL
         assert_equal_with_diff_on_failure(kitchen_sink_expected_arguments, actual_arguments)
       end
 
-      test 'metrics for directives are empty if no directives are found' do
+      def test_metrics_for_directives_are_empty_if_no_directives_are_found
         context = {}
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,
@@ -182,8 +182,8 @@ module GraphQL
         )
         result = query.result.to_h
 
-        refute result['errors'].present?
-        assert result['data'].present?
+        assert_nil result['errors']
+        refute_empty result['data']
 
         results = context[:simple_extractor_results]
 
@@ -192,7 +192,7 @@ module GraphQL
         assert_equal_with_diff_on_failure([], actual_directives)
       end
 
-      test 'extracts metrics from directives on QUERY and FIELD location' do
+      def test_extracts_metrics_from_directives_on_QUERY_and_FIELD_location
         context = {}
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,
@@ -203,8 +203,8 @@ module GraphQL
         )
         result = query.result.to_h
 
-        refute result['errors'].present?
-        assert result['data'].present?
+        assert_nil result['errors']
+        refute_empty result['data']
 
         results = context[:simple_extractor_results]
 
@@ -262,7 +262,7 @@ module GraphQL
         assert_equal_with_diff_on_failure(expected_arguments, actual_arguments)
       end
 
-      test 'extracts metrics from directives on MUTATION location' do
+      def test_extracts_metrics_from_directives_on_MUTATION_location
         context = {}
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,
@@ -284,8 +284,8 @@ module GraphQL
         )
         result = query.result.to_h
 
-        refute result['errors'].present?
-        assert result['data'].present?
+        assert_nil result['errors']
+        refute_empty result['data']
 
         results = context[:simple_extractor_results]
 
@@ -369,7 +369,7 @@ module GraphQL
         assert_equal_with_diff_on_failure(expected_arguments, actual_arguments)
       end
 
-      test 'extracts metrics from directives on QUERY and FIELD location for document with fragment' do
+      def test_extracts_metrics_from_directives_on_QUERY_and_FIELD_location_for_document_with_fragment
         context = {}
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,
@@ -380,8 +380,8 @@ module GraphQL
         )
         result = query.result.to_h
 
-        refute result['errors'].present?
-        assert result['data'].present?
+        assert_nil result['errors']
+        refute_empty result['data']
 
         results = context[:simple_extractor_results]
 
@@ -449,7 +449,7 @@ module GraphQL
         assert_equal_with_diff_on_failure(expected_arguments, actual_arguments)
       end
 
-      test 'extracts metrics from queries, as well as their fields and arguments (when using Schema.execute)' do
+      def test_extracts_metrics_from_queries_as_well_as_their_fields_and_arguments_when_using_Schema_execute
         context = {}
         result = SchemaWithFullMetrics.execute(
           kitchen_sink_query_document,
@@ -458,8 +458,8 @@ module GraphQL
           context: context
         )
 
-        refute result['errors'].present?
-        assert result['data'].present?
+        assert_nil result['errors']
+        refute_empty result['data']
 
         results = context[:simple_extractor_results]
 
@@ -472,7 +472,7 @@ module GraphQL
         assert_equal_with_diff_on_failure(kitchen_sink_expected_arguments, actual_arguments)
       end
 
-      test 'extracts metrics from queries, as well as their fields and arguments (when using Schema.execute), even with validation skipped' do
+      def test_extracts_metrics_from_queries_as_well_as_their_fields_and_arguments_when_using_Schema_execute_even_with_validation_skipped
         context = {}
         result = SchemaWithFullMetrics.execute(
           kitchen_sink_query_document,
@@ -482,8 +482,8 @@ module GraphQL
           validate: false
         )
 
-        refute result['errors'].present?
-        assert result['data'].present?
+        assert_nil result['errors']
+        refute_empty result['data']
 
         results = context[:simple_extractor_results]
 
@@ -496,7 +496,7 @@ module GraphQL
         assert_equal_with_diff_on_failure(kitchen_sink_expected_arguments, actual_arguments)
       end
 
-      test 'extracts metrics from queries that have already been parsed, omitting parsing timings' do
+      def test_extracts_metrics_from_queries_that_have_already_been_parsed_omitting_parsing_timings
         context = {}
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,
@@ -507,8 +507,8 @@ module GraphQL
         )
         result = query.result.to_h
 
-        refute result['errors'].present?
-        assert result['data'].present?
+        assert_nil result['errors']
+        refute_empty result['data']
 
         results = context[:simple_extractor_results]
 
@@ -533,7 +533,7 @@ module GraphQL
         assert_equal_with_diff_on_failure(kitchen_sink_expected_arguments, actual_arguments)
       end
 
-      test 'extracts metrics in all of the same ways, when a multiplex is executed - regardless if queries are pre-parsed or not' do
+      def test_extracts_metrics_in_all_of_the_same_ways_when_a_multiplex_is_executed_regardless_if_queries_are_pre_parsed_or_not
         queries = [
           {
             document: GraphQL.parse('query OtherQuery { post(id: "42") { id title } }'),
@@ -631,7 +631,7 @@ module GraphQL
         assert_equal_with_diff_on_failure(kitchen_sink_expected_arguments, kitchen_sink_query_metrics[:arguments])
       end
 
-      test "safely skips logging arguments metrics for fields, when the argument value look up fails (possibly because it failed input coercion)" do
+      def test_safely_skips_logging_arguments_metrics_for_fields_when_the_argument_value_look_up_fails_possibly_because_it_failed_input_coercion
         context = { raise_in_prepare: true }
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,
@@ -654,7 +654,7 @@ module GraphQL
         assert_equal 8, actual_arguments.size
       end
 
-      test "safely returns static metrics if runtime metrics gathering is interrupted" do
+      def test_safely_returns_static_metrics_if_runtime_metrics_gathering_is_interrupted
         context = {}
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,
@@ -690,7 +690,7 @@ module GraphQL
         assert_equal 9, actual_arguments.size
       end
 
-      test 'skips logging for fields and arguments if `skip_field_and_argument_metrics: true` in context' do
+      def test_skips_logging_for_fields_and_arguments_if_skip_field_and_argument_metrics_true_in_context
         context = {
           GraphQL::Metrics::SKIP_FIELD_AND_ARGUMENT_METRICS => true,
         }
@@ -704,8 +704,8 @@ module GraphQL
         )
         result = query.result.to_h
 
-        refute result['errors'].present?
-        assert result['data'].present?
+        assert_nil result['errors']
+        refute_empty result['data']
 
         results = context[:simple_extractor_results]
 
@@ -718,7 +718,7 @@ module GraphQL
         assert_equal [], actual_arguments
       end
 
-      test 'skips analysis, if the query is syntactically invalid' do
+      def test_skips_analysis_if_the_query_is_syntactically_invalid
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,
           'HELLO',
@@ -728,7 +728,7 @@ module GraphQL
         assert_nil analysis_results
       end
 
-      test 'skips analysis, if the query is semantically invalid' do
+      def test_skips_analysis_if_the_query_is_semantically_invalid
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,
           '{ foo { bar } }',
@@ -738,7 +738,7 @@ module GraphQL
         assert_nil analysis_results
       end
 
-      test 'skips analysis, if the query is valid but blank' do
+      def test_skips_analysis_if_the_query_is_valid_but_blank
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,
           '# Welcome to GraphiQL !',
@@ -748,7 +748,7 @@ module GraphQL
         assert_nil analysis_results
       end
 
-      test 'skips analysis, instrumentation and tracing if `skip_graphql_metrics_analysis` is set to true in the context' do
+      def test_skips_analysis_instrumentation_and_tracing_if_skip_graphql_metrics_analysis_is_set_to_true_in_the_context
         context = { skip_graphql_metrics_analysis: true }
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,
@@ -759,8 +759,8 @@ module GraphQL
         )
         result = query.result.to_h
 
-        refute result['errors'].present?
-        assert result['data'].present?
+        assert_nil result['errors']
+        refute_empty result['data']
 
         results = context[:simple_extractor_results]
 
@@ -768,7 +768,7 @@ module GraphQL
         assert_equal(expected, results)
       end
 
-      test 'extracts metrics manually via analyze call, with args supplied inline' do
+      def test_extracts_metrics_manually_via_analyze_call_with_args_supplied_inline
         context = {}
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,
@@ -779,8 +779,8 @@ module GraphQL
 
         result = query.result.to_h
 
-        refute result['errors'].present?
-        assert result['data'].present?
+        assert_nil result['errors']
+        refute_empty result['data']
 
         results = context[:simple_extractor_results]
         actual_arguments = results[:arguments]
@@ -788,7 +788,7 @@ module GraphQL
         assert_equal_with_diff_on_failure(shared_expected_arguments_metrics, actual_arguments)
       end
 
-      test 'extracts metrics manually via analyze call with args supplied by variables' do
+      def test_extracts_metrics_manually_via_analyze_call_with_args_supplied_by_variables
         context = {}
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,
@@ -811,8 +811,8 @@ module GraphQL
 
         result = query.result.to_h
 
-        refute result['errors'].present?
-        assert result['data'].present?
+        assert_nil result['errors']
+        refute_empty result['data']
 
         results = context[:simple_extractor_results]
         actual_arguments = results[:arguments]
@@ -820,7 +820,7 @@ module GraphQL
         assert_equal_with_diff_on_failure(shared_expected_arguments_metrics, actual_arguments)
       end
 
-      test 'fields requested that are not resolved (e.g. id for a post that itself was never resolved) produce no inline field timings' do
+      def test_fields_requested_that_are_not_resolved_e_g_id_for_a_post_that_itself_was_never_resolved_produce_no_inline_field_timings
         context = {}
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,
@@ -829,8 +829,8 @@ module GraphQL
         )
         result = query.result.to_h
 
-        refute result['errors'].present?
-        assert result['data'].present?
+        assert_nil result['errors']
+        refute_empty result['data']
 
         results = context[:simple_extractor_results]
 
@@ -906,7 +906,7 @@ module GraphQL
         }]
       end
 
-      test 'extracts metrics from mutations, input objects' do
+      def test_extracts_metrics_from_mutations_input_objects
         context = {}
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,
@@ -926,8 +926,8 @@ module GraphQL
         )
         result = query.result.to_h
 
-        refute result['errors'].present?
-        assert result['data'].present?
+        assert_nil result['errors']
+        refute_empty result['data']
 
         results = context[:simple_extractor_results]
 
@@ -1045,7 +1045,7 @@ module GraphQL
         assert_equal_with_diff_on_failure(expected_arguments, actual_arguments)
       end
 
-      test 'capture_field_timings disable gathers static metrics with no field timings' do
+      def test_capture_field_timings_disable_gathers_static_metrics_with_no_field_timings
         context = {}
         query = GraphQL::Query.new(
           SchemaWithoutFieldTimingMetrics,
@@ -1056,8 +1056,8 @@ module GraphQL
         )
         result = query.result.to_h
 
-        refute result['errors'].present?
-        assert result['data'].present?
+        assert_nil result['errors']
+        refute_empty result['data']
 
         results = context[:simple_extractor_results]
 
@@ -1263,7 +1263,7 @@ module GraphQL
         assert_equal_with_diff_on_failure(expected_arguments, actual_arguments)
       end
 
-      test 'instrumentation and analyzer without trace metrics gathers static metrics only' do
+      def test_instrumentation_and_analyzer_without_trace_metrics_gathers_static_metrics_only
         context = {}
         query = GraphQL::Query.new(
           SchemaWithoutTimingMetrics,
@@ -1273,8 +1273,8 @@ module GraphQL
           context: context
         )
         result = query.result.to_h
-        refute result['errors'].present?
-        assert result['data'].present?
+        assert_nil result['errors']
+        refute_empty result['data']
 
         results = context[:simple_extractor_results]
 
@@ -1474,7 +1474,7 @@ module GraphQL
         assert_equal_with_diff_on_failure(expected_arguments, actual_arguments)
       end
 
-      test 'handles input objects with no required fields (ONE of which has a default) are passed in as `{}`' do
+      def test_handles_input_objects_with_no_required_fields_ONE_of_which_has_a_default_are_passed_in_as_empty_hash
         query_document = <<~GRAPHQL
           mutation PostUpdate {
             postUpdate(post: {}) {
@@ -1486,8 +1486,8 @@ module GraphQL
         context = {}
         query = GraphQL::Query.new(SchemaWithFullMetrics, query_document, context: context)
         result = query.result.to_h
-        refute result['errors'].present?
-        assert result['data'].present?
+        assert_nil result['errors']
+        refute_empty result['data']
 
         metrics_results = context[:simple_extractor_results]
         actual_arguments = metrics_results[:arguments]
@@ -1520,7 +1520,7 @@ module GraphQL
         assert_equal_with_diff_on_failure(expected_arguments, actual_arguments)
       end
 
-      test 'handles input objects with no required fields (NONE of which have a default) are passed in as `{}`' do
+      def test_handles_input_objects_with_no_required_fields_NONE_of_which_have_a_default_are_passed_in_as_empty_hash
         query_document = <<~GRAPHQL
           mutation PostUpvote {
             postUpvote(upvote: {}) {
@@ -1533,8 +1533,8 @@ module GraphQL
         query = GraphQL::Query.new(SchemaWithFullMetrics, query_document, context: context)
         result = query.result.to_h
 
-        refute result['errors'].present?
-        assert result['data'].present?
+        assert_nil result['errors']
+        refute_empty result['data']
 
         metrics_results = context[:simple_extractor_results]
         actual_arguments = metrics_results[:arguments]
@@ -1556,7 +1556,7 @@ module GraphQL
         assert_equal_with_diff_on_failure(expected_arguments, actual_arguments)
       end
 
-      test "extracts parent_input_object_type for nested input object fields" do
+      def test_extracts_parent_input_object_type_for_nested_input_object_fields
         context = {}
         query = GraphQL::Query.new(
           SchemaWithFullMetrics,
@@ -1578,8 +1578,8 @@ module GraphQL
         )
         result = query.result.to_h
 
-        refute result['errors'].present?
-        assert result['data'].present?
+        assert_nil result['errors']
+        refute_empty result['data']
 
         results = context[:simple_extractor_results]
         actual_arguments = results[:arguments]
@@ -1595,7 +1595,7 @@ module GraphQL
         assert_equal("TagInput", handle_argument[:parent_input_object_type])
       end
 
-      test "handles invalid documents without collecting metrics" do
+      def test_handles_invalid_documents_without_collecting_metrics
         document = <<~QUERY
           # Welcome to GraphiQL !
         QUERY
@@ -1608,7 +1608,7 @@ module GraphQL
           "errors" => [],
         }, result)
 
-        refute context[:simple_extractor_results].present?
+        assert_nil context[:simple_extractor_results]
       end
 
       private
